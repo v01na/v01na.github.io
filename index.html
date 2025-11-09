@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ВОЛНА | Независимый контроль электромагнитного излучения</title>
+    <link href="styles.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #0a192f;
+            color: #e6f1ff;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Навигация */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            background-color: rgba(10, 25, 47, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            transition: all 0.3s ease;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 24px;
+            color: #64ffda;
+            font-family: 'Arctika';
+        }
+
+        .logo svg {
+            margin-right: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+
+        .nav-links li {
+            margin-left: 30px;
+        }
+
+        .nav-links a {
+            color: #ccd6f6;
+            text-decoration: none;
+            font-size: 16px;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #64ffda;
+        }
+
+        /* Герой секция */
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            max-width: 600px;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #64ffda, #00a8cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            color: #a8b2d1;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 28px;
+            background-color: transparent;
+            color: #64ffda;
+            border: 1px solid #64ffda;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background-color: rgba(100, 255, 218, 0.1);
+            transform: translateY(-3px);
+        }
+
+        /* Секции */
+        section {
+            padding: 100px 0;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 60px;
+            color: #ccd6f6;
+            position: relative;
+        }
+
+        .section-title:after {
+            content: '';
+            display: block;
+            width: 70px;
+            height: 3px;
+            background-color: #64ffda;
+            margin: 15px auto;
+        }
+
+        /* Сетка услуг */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .service-card {
+            background-color: #112240;
+            padding: 30px;
+            border-radius: 5px;
+            transition: transform 0.3s ease;
+            border: 1px solid rgba(100, 255, 218, 0.1);
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(100, 255, 218, 0.3);
+        }
+
+        .service-icon {
+            font-size: 2.5rem;
+            color: #64ffda;
+            margin-bottom: 20px;
+        }
+
+        .service-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #ccd6f6;
+        }
+
+        .service-card p {
+            color: #a8b2d1;
+            line-height: 1.6;
+        }
+
+        /* Визуализация волн */
+        .wave-visualization {
+            height: 500px;
+            position: relative;
+            margin: 50px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid rgba(100, 255, 218, 0.2);
+        }
+
+        #waveCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .wave-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .wave-controls button {
+            padding: 8px 16px;
+            background-color: #112240;
+            color: #64ffda;
+            border: 1px solid #64ffda;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .wave-controls button:hover {
+            background-color: rgba(100, 255, 218, 0.1);
+        }
+
+        /* Секция ООО */
+        .ooo-section {
+            background-color: #112240;
+            padding: 80px 0;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .ooo-section h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #64ffda;
+        }
+
+        .ooo-section p {
+            max-width: 700px;
+            margin: 0 auto 30px;
+            line-height: 1.6;
+            color: #a8b2d1;
+        }
+
+        /* Контакты */
+        .contact-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .contact-icon {
+            font-size: 1.5rem;
+            color: #64ffda;
+            margin-right: 15px;
+        }
+
+        /* Футер */
+        footer {
+            background-color: #020c1b;
+            padding: 50px 0 20px;
+            text-align: center;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            list-style: none;
+            margin-bottom: 30px;
+        }
+
+        .footer-links li {
+            margin: 0 15px;
+        }
+
+        .footer-links a {
+            color: #a8b2d1;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #64ffda;
+        }
+
+        .copyright {
+            color: #8892b0;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo">
+                    <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                        <path d="M5 20C5 20 10 10 20 10C30 10 35 20 35 20C35 20 30 30 20 30C10 30 5 20 5 20Z" stroke="#64ffda" stroke-width="2"/>
+                        <path d="M10 20C10 20 13 15 20 15C27 15 30 20 30 20C30 20 27 25 20 25C13 25 10 20 10 20Z" stroke="#64ffda" stroke-width="2"/>
+                        <path d="M15 20C15 20 16 17.5 20 17.5C24 17.5 25 20 25 20C25 20 24 22.5 20 22.5C16 22.5 15 20 15 20Z" stroke="#64ffda" stroke-width="2"/>
+                    </svg>
+                    ВОЛНА
+                </div>
+                <ul class="nav-links">
+                    <li><a href="#about">О нас</a></li>
+                    <li><a href="#services">Услуги</a></li>
+                    <li><a href="#radiation">Излучение</a></li>
+                    <li><a href="#contact">Контакты</a></li>
+                    <li><a href="#ooo" class="btn">ООО "Волна"</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Герой секция -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>КОНТРОЛЬ ЭЛЕКТРОМАГНИТНОГО ИЗЛУЧЕНИЯ</h1>
+                <p>Независимые экспертизы, юридическая поддержка и современные технологии для защиты вашего здоровья и прав в условиях цифровой трансформации.</p>
+                <a href="#contact" class="btn">Связаться с нами</a>
+            </div>
+        </div>
+        <div id="waveVisualization"></div>
+    </section>
+
+    <!-- О нас -->
+    <section id="about">
+        <div class="container">
+            <h2 class="section-title">О НАС</h2>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon">📊</div>
+                    <h3>Экспертиза и замеры</h3>
+                    <p>Проводим точные измерения электромагнитного излучения с использованием современного оборудования, включая анализаторы Narda.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">⚖️</div>
+                    <h3>Юридическая поддержка</h3>
+                    <p>Предоставляем полное юридическое сопровождение в спорах с сотовыми операторами и другими источниками излучения.</p>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon">🔬</div>
+                    <h3>Научные исследования</h3>
+                    <p>Проводим независимые исследования влияния электромагнитного излучения на здоровье человека и окружающую среду.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Виды излучения -->
+    <section id="radiation">
+        <div class="container">
+            <h2 class="section-title">ВИДЫ ВОЛНОВОГО ИЗЛУЧЕНИЯ</h2>
+            <div class="wave-visualization">
+                <canvas id="waveCanvas"></canvas>
+            </div>
+            <div class="wave-controls">
+                <button id="radioWaves">Радиоволны</button>
+                <button id="microwaves">Микроволны</button>
+                <button id="infrared">Инфракрасное</button>
+                <button id="visible">Видимое</button>
+                <button id="uv">Ультрафиолет</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ООО Волна -->
+    <section id="ooo">
+        <div class="container">
+            <div class="ooo-section">
+                <h2>ООО "ВОЛНА"</h2>
+                <p>Коммерческое подразделение нашей организации, специализирующееся на разработке технологических решений для контроля и анализа электромагнитного излучения, включая программное обеспечение и аппаратные комплексы.</p>
+                <a href="https://example.com" class="btn">Перейти на сайт ООО</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Контакты -->
+    <section id="contact">
+        <div class="container">
+            <h2 class="section-title">КОНТАКТЫ</h2>
+            <div class="contact-info">
+                <div class="contact-item">
+                    <div class="contact-icon">📍</div>
+                    <div>
+                        <h3>Адрес</h3>
+                        <p>г. Москва, ул. Электромагнитная, 1</p>
+                    </div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-icon">📞</div>
+                    <div>
+                        <h3>Телефон</h3>
+                        <p>+7 (495) 123-45-67</p>
+                    </div>
+                </div>
+                <div class="contact-item">
+                    <div class="contact-icon">✉️</div>
+                    <div>
+                        <h3>Email</h3>
+                        <p>info@volna-nko.ru</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Футер -->
+    <footer>
+        <div class="container">
+            <div class="logo">
+                <svg width="30" height="30" viewBox="0 0 40 40" fill="none">
+                    <path d="M5 20C5 20 10 10 20 10C30 10 35 20 35 20C35 20 30 30 20 30C10 30 5 20 5 20Z" stroke="#64ffda" stroke-width="2"/>
+                    <path d="M10 20C10 20 13 15 20 15C27 15 30 20 30 20C30 20 27 25 20 25C13 25 10 20 10 20Z" stroke="#64ffda" stroke-width="2"/>
+                    <path d="M15 20C15 20 16 17.5 20 17.5C24 17.5 25 20 25 20C25 20 24 22.5 20 22.5C16 22.5 15 20 15 20Z" stroke="#64ffda" stroke-width="2"/>
+                </svg>
+                ВОЛНА
+            </div>
+            <ul class="footer-links">
+                <li><a href="#about">О нас</a></li>
+                <li><a href="#services">Услуги</a></li>
+                <li><a href="#radiation">Излучение</a></li>
+                <li><a href="#contact">Контакты</a></li>
+                <li><a href="#ooo">ООО "Волна"</a></li>
+            </ul>
+            <p class="copyright">© 2023 НКО "Волна". Все права защищены.</p>
+        </div>
+    </footer>
+
+    <!-- Three.js и визуализация -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Инициализация Three.js сцены для визуализации волн
+        let scene, camera, renderer, waveGroup;
+        let waves = [];
+        
+        function initThreeJS() {
+            // Создание сцены
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a192f);
+            
+            // Создание камеры
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+            
+            // Создание рендерера
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('waveVisualization').appendChild(renderer.domElement);
+            
+            // Создание группы для волн
+            waveGroup = new THREE.Group();
+            scene.add(waveGroup);
+            
+            // Создание различных типов волн
+            createWave('radio', 0x64ffda, 1, 0.5, 0);
+            createWave('microwave', 0x00a8cc, 1.5, 0.3, 1);
+            createWave('infrared', 0xff6b6b, 2, 0.4, 2);
+            
+            // Добавление освещения
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0x64ffda, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+            
+            // Обработка изменения размера окна
+            window.addEventListener('resize', onWindowResize);
+            
+            // Запуск анимации
+            animate();
+        }
+        
+        function createWave(type, color, radius, amplitude, offset) {
+            const points = [];
+            const geometry = new THREE.BufferGeometry();
+            const material = new THREE.LineBasicMaterial({ color: color });
+            
+            // Создание точек для волны
+            for (let i = 0; i <= 100; i++) {
+                const angle = (i / 100) * Math.PI * 2;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius + Math.sin(angle * 10 + offset) * amplitude;
+                const z = 0;
+                points.push(new THREE.Vector3(x, y, z));
+            }
+            
+            geometry.setFromPoints(points);
+            const wave = new THREE.Line(geometry, material);
+            wave.userData = { type, amplitude, offset, radius, speed: 0.02 };
+            waveGroup.add(wave);
+            waves.push(wave);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Анимация волн
+            waves.forEach(wave => {
+                const positions = wave.geometry.attributes.position.array;
+                const { amplitude, offset, radius, speed } = wave.userData;
+                
+                for (let i = 0; i <= 100; i++) {
+                    const angle = (i / 100) * Math.PI * 2;
+                    const x = Math.cos(angle) * radius;
+                    const y = Math.sin(angle) * radius + Math.sin(angle * 10 + offset + Date.now() * 0.001 * speed) * amplitude;
+                    const z = 0;
+                    
+                    positions[i * 3] = x;
+                    positions[i * 3 + 1] = y;
+                    positions[i * 3 + 2] = z;
+                }
+                
+                wave.geometry.attributes.position.needsUpdate = true;
+            });
+            
+            // Вращение группы волн
+            waveGroup.rotation.z += 0.005;
+            
+            renderer.render(scene, camera);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Визуализация волн на Canvas
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        function initCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            // Обработчики для кнопок управления
+            document.getElementById('radioWaves').addEventListener('click', () => drawWave(0.02, 50, '#64ffda', 'Радиоволны'));
+            document.getElementById('microwaves').addEventListener('click', () => drawWave(0.05, 30, '#00a8cc', 'Микроволны'));
+            document.getElementById('infrared').addEventListener('click', () => drawWave(0.1, 20, '#ff6b6b', 'Инфракрасное излучение'));
+            document.getElementById('visible').addEventListener('click', () => drawWave(0.2, 15, '#ffd93d', 'Видимое излучение'));
+            document.getElementById('uv').addEventListener('click', () => drawWave(0.3, 10, '#9b5de5', 'Ультрафиолетовое излучение'));
+            
+            // Запуск анимации по умолчанию
+            drawWave(0.02, 50, '#64ffda', 'Радиоволны');
+        }
+        
+        function drawWave(frequency, amplitude, color, label) {
+            let time = 0;
+            
+            function animateWave() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Рисование сетки
+                ctx.strokeStyle = 'rgba(100, 255, 218, 0.1)';
+                ctx.lineWidth = 1;
+                
+                for (let i = 0; i < canvas.width; i += 50) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, 0);
+                    ctx.lineTo(i, canvas.height);
+                    ctx.stroke();
+                }
+                
+                for (let i = 0; i < canvas.height; i += 50) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, i);
+                    ctx.lineTo(canvas.width, i);
+                    ctx.stroke();
+                }
+                
+                // Рисование волны
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+                
+                for (let x = 0; x < canvas.width; x++) {
+                    const y = canvas.height / 2 + Math.sin(x * frequency + time) * amplitude;
+                    
+                    if (x === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                ctx.stroke();
+                
+                // Отображение метки
+                ctx.fillStyle = color;
+                ctx.font = '16px Arial';
+                ctx.fillText(label, 20, 30);
+                
+                time += 0.05;
+                requestAnimationFrame(animateWave);
+            }
+            
+            animateWave();
+        }
+        
+        // Инициализация при загрузке страницы
+        window.addEventListener('load', () => {
+            initThreeJS();
+            initCanvas();
+        });
+        
+        // Плавная прокрутка для навигации
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
