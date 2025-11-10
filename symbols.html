@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Символы модуляции</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: linear-gradient(135deg, #0a2e3d 0%, #1a4858 50%, #0a2e3d 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .wave-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .glow-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, 
+                rgba(255, 255, 200, 0.3) 0%, 
+                rgba(255, 255, 200, 0.2) 20%,
+                rgba(100, 200, 200, 0.1) 40%,
+                transparent 70%);
+            filter: blur(40px);
+            animation: pulse 4s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+            50% { transform: translate(-50%, -50%) scale(1.1); opacity: 0.8; }
+        }
+        
+        .main-title {
+            font-family: 'Russo One', sans-serif;
+            font-size: clamp(60px, 15vw, 140px);
+            font-weight: 900;
+            letter-spacing: 0.1em;
+            margin-bottom: 20px;
+            position: relative;
+            display: inline-block;
+            transform: perspective(500px) rotateX(5deg);
+        }
+        
+        .title-3d {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .title-3d span {
+            position: relative;
+            display: inline-block;
+            color: #ff6b4a;
+            text-shadow: 
+                0 0 5px rgba(255, 107, 74, 0.8),
+                0 0 10px rgba(255, 107, 74, 0.6),
+                0 0 20px rgba(255, 107, 74, 0.4);
+        }
+        
+        /* 3D Layered effect */
+        .title-3d::before {
+            content: 'ВОЛНА';
+            position: absolute;
+            top: 0;
+            left: 0;
+            color: #ff8b6a;
+            z-index: -1;
+            transform: translate(2px, 2px);
+        }
+        
+        .title-3d::after {
+            content: 'ВОЛНА';
+            position: absolute;
+            top: 0;
+            left: 0;
+            color: #ffab8a;
+            z-index: -2;
+            transform: translate(4px, 4px);
+        }
+        
+        .title-layers {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        
+        .layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Russo One', sans-serif;
+            font-size: clamp(60px, 15vw, 140px);
+            font-weight: 900;
+            letter-spacing: 0.1em;
+        }
+        
+        .layer-1 { color: #ffd700; transform: translate(6px, 6px); opacity: 0.9; z-index: -3; }
+        .layer-2 { color: #ffed4e; transform: translate(8px, 8px); opacity: 0.8; z-index: -4; }
+        .layer-3 { color: #fffb8f; transform: translate(10px, 10px); opacity: 0.7; z-index: -5; }
+        .layer-4 { color: #ffffc4; transform: translate(12px, 12px); opacity: 0.6; z-index: -6; }
+        
+        /* Contour lines around text */
+        .title-contours {
+            position: absolute;
+            top: -15px;
+            left: -15px;
+            right: -15px;
+            bottom: -15px;
+            pointer-events: none;
+        }
+        
+        .contour-line {
+            position: absolute;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+        }
+        
+        .contour-1 { inset: 0; }
+        .contour-2 { inset: -8px; opacity: 0.6; }
+        .contour-3 { inset: -16px; opacity: 0.4; }
+        .contour-4 { inset: -24px; opacity: 0.2; }
+        
+        .subtitle {
+            font-size: clamp(40px, 8vw, 80px);
+            font-weight: 700;
+            color: #4dd8e8;
+            text-shadow: 
+                0 0 10px rgba(77, 216, 232, 0.8),
+                0 0 20px rgba(77, 216, 232, 0.6),
+                0 0 30px rgba(77, 216, 232, 0.4);
+            margin-bottom: 60px;
+            letter-spacing: 0.2em;
+        }
+        
+        .modulation-section {
+            background: rgba(13, 45, 58, 0.7);
+            border: 3px solid rgba(77, 216, 232, 0.5);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+            backdrop-filter: blur(10px);
+            box-shadow: 
+                0 0 30px rgba(77, 216, 232, 0.3),
+                inset 0 0 30px rgba(77, 216, 232, 0.1);
+        }
+        
+        .section-title {
+            font-size: clamp(20px, 4vw, 32px);
+            color: #4dd8e8;
+            margin-bottom: 40px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+        
+        .symbols-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .symbol-item {
+            text-align: center;
+        }
+        
+        .symbol-icon {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .symbol-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .symbol-label {
+            font-size: clamp(16px, 3vw, 24px);
+            color: #4dd8e8;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+        }
+        
+        /* SVG Styles */
+        .symbol-stroke {
+            stroke: #4dd8e8;
+            stroke-width: 3;
+            fill: none;
+            filter: drop-shadow(0 0 8px rgba(77, 216, 232, 0.6));
+        }
+        
+        .symbol-fill {
+            fill: #4dd8e8;
+            filter: drop-shadow(0 0 8px rgba(77, 216, 232, 0.6));
+        }
+        
+        .grid-cell {
+            stroke: #4dd8e8;
+            stroke-width: 2;
+            fill: none;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .modulation-section {
+                padding: 30px 20px;
+            }
+            
+            .symbols-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 20px;
+            }
+            
+            .symbol-icon {
+                width: 80px;
+                height: 80px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .symbols-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }
+            
+            .symbol-icon {
+                width: 60px;
+                height: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="wave-container" style="display:none;">
+        <canvas id="waveCanvas"></canvas>
+        <div class="glow-center"></div>
+    </div>
+    
+
+        
+        <div class="modulation-section">
+            <h2 class="section-title">Символы модуляции</h2>
+            
+            <div class="symbols-grid">
+                <!-- ASK Symbol -->
+                <div class="symbol-item">
+                    <div class="symbol-icon">
+                        <svg viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="40" class="symbol-stroke"/>
+                        </svg>
+                    </div>
+                    <div class="symbol-label">ASK</div>
+                </div>
+                
+                <!-- BPSK Symbol -->
+                <div class="symbol-item">
+                    <div class="symbol-icon">
+                        <svg viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="40" class="symbol-stroke"/>
+                            <line x1="10" y1="50" x2="90" y2="50" class="symbol-stroke"/>
+                            <line x1="50" y1="10" x2="50" y2="90" class="symbol-stroke"/>
+                            <circle cx="50" cy="50" r="4" class="symbol-fill"/>
+                        </svg>
+                    </div>
+                    <div class="symbol-label">BPSK</div>
+                </div>
+                
+                <!-- QPSK Symbol -->
+                <div class="symbol-item">
+                    <div class="symbol-icon">
+                        <svg viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="40" class="symbol-stroke"/>
+                            <line x1="20" y1="20" x2="80" y2="80" class="symbol-stroke"/>
+                            <line x1="80" y1="20" x2="20" y2="80" class="symbol-stroke"/>
+                            <circle cx="50" cy="50" r="4" class="symbol-fill"/>
+                            <circle cx="35" cy="35" r="3" class="symbol-fill"/>
+                            <circle cx="65" cy="35" r="3" class="symbol-fill"/>
+                            <circle cx="35" cy="65" r="3" class="symbol-fill"/>
+                            <circle cx="65" cy="65" r="3" class="symbol-fill"/>
+                        </svg>
+                    </div>
+                    <div class="symbol-label">QPSK</div>
+                </div>
+                
+                <!-- 16-QAM Symbol -->
+                <div class="symbol-item">
+                    <div class="symbol-icon">
+                        <svg viewBox="0 0 100 100">
+                            <!-- Grid -->
+                            <line x1="25" y1="15" x2="25" y2="85" class="grid-cell"/>
+                            <line x1="42" y1="15" x2="42" y2="85" class="grid-cell"/>
+                            <line x1="58" y1="15" x2="58" y2="85" class="grid-cell"/>
+                            <line x1="75" y1="15" x2="75" y2="85" class="grid-cell"/>
+                            
+                            <line x1="15" y1="25" x2="85" y2="25" class="grid-cell"/>
+                            <line x1="15" y1="42" x2="85" y2="42" class="grid-cell"/>
+                            <line x1="15" y1="58" x2="85" y2="58" class="grid-cell"/>
+                            <line x1="15" y1="75" x2="85" y2="75" class="grid-cell"/>
+                            
+                            <!-- Dots for constellation points -->
+                            <circle cx="25" cy="25" r="2.5" class="symbol-fill"/>
+                            <circle cx="42" cy="25" r="2.5" class="symbol-fill"/>
+                            <circle cx="58" cy="25" r="2.5" class="symbol-fill"/>
+                            <circle cx="75" cy="25" r="2.5" class="symbol-fill"/>
+                            
+                            <circle cx="25" cy="42" r="2.5" class="symbol-fill"/>
+                            <circle cx="42" cy="42" r="2.5" class="symbol-fill"/>
+                            <circle cx="58" cy="42" r="2.5" class="symbol-fill"/>
+                            <circle cx="75" cy="42" r="2.5" class="symbol-fill"/>
+                            
+                            <circle cx="25" cy="58" r="2.5" class="symbol-fill"/>
+                            <circle cx="42" cy="58" r="2.5" class="symbol-fill"/>
+                            <circle cx="58" cy="58" r="2.5" class="symbol-fill"/>
+                            <circle cx="75" cy="58" r="2.5" class="symbol-fill"/>
+                            
+                            <circle cx="25" cy="75" r="2.5" class="symbol-fill"/>
+                            <circle cx="42" cy="75" r="2.5" class="symbol-fill"/>
+                            <circle cx="58" cy="75" r="2.5" class="symbol-fill"/>
+                            <circle cx="75" cy="75" r="2.5" class="symbol-fill"/>
+                        </svg>
+                    </div>
+                    <div class="symbol-label">16-QAM</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('waveCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Wave properties
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const numWaves = 15;
+        const maxRadius = Math.max(canvas.width, canvas.height) * 0.8;
+        
+        // Arrow class
+        class Arrow {
+            constructor(radius, angle, color, speed, direction) {
+                this.radius = radius;
+                this.angle = angle;
+                this.color = color;
+                this.speed = speed;
+                this.direction = direction; // 1 for outward, -1 for inward
+                this.size = 15;
+            }
+            
+            update() {
+                this.angle += this.speed * 0.02;
+                this.radius += this.direction * this.speed * 0.5;
+                
+                // Reset position when going out of bounds
+                if (this.direction > 0 && this.radius > maxRadius) {
+                    this.radius = 50;
+                } else if (this.direction < 0 && this.radius < 50) {
+                    this.radius = maxRadius;
+                }
+            }
+            
+            draw() {
+                const x = centerX + Math.cos(this.angle) * this.radius;
+                const y = centerY + Math.sin(this.angle) * this.radius;
+                
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(this.angle + (this.direction > 0 ? 0 : Math.PI));
+                
+                // Arrow shape
+                ctx.beginPath();
+                ctx.moveTo(this.size, 0);
+                ctx.lineTo(-this.size * 0.5, -this.size * 0.6);
+                ctx.lineTo(-this.size * 0.5, this.size * 0.6);
+                ctx.closePath();
+                
+                // Gradient fill
+                const gradient = ctx.createLinearGradient(-this.size, 0, this.size, 0);
+                gradient.addColorStop(0, this.color + '00');
+                gradient.addColorStop(0.5, this.color);
+                gradient.addColorStop(1, this.color + '00');
+                
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+        
+        // Create arrows
+        const arrows = [];
+        const cyanColor = '#4dd8e8';
+        const orangeColor = '#ff6b4a';
+        const yellowColor = '#ffd700';
+        
+        // Create multiple arrows at different positions
+        for (let i = 0; i < 25; i++) {
+            const angle = (Math.PI * 2 * i) / 25;
+            const radius = 100 + Math.random() * (maxRadius - 100);
+            const colors = [cyanColor, orangeColor, yellowColor];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const direction = Math.random() > 0.5 ? 1 : -1;
+            const speed = 0.5 + Math.random() * 1.5;
+            
+            arrows.push(new Arrow(radius, angle, color, speed, direction));
+        }
+        
+        // Animation
+        function animate() {
+            // Update canvas center in case of resize
+            const currentCenterX = canvas.width / 2;
+            const currentCenterY = canvas.height / 2;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw concentric wave circles
+            for (let i = 0; i < numWaves; i++) {
+                const radius = (maxRadius / numWaves) * (i + 1);
+                
+                ctx.beginPath();
+                ctx.arc(currentCenterX, currentCenterY, radius, 0, Math.PI * 2);
+                
+                // Gradient stroke
+                const opacity = 0.3 - (i / numWaves) * 0.2;
+                const color = i % 3 === 0 ? cyanColor : i % 3 === 1 ? orangeColor : yellowColor;
+                ctx.strokeStyle = color + Math.floor(opacity * 255).toString(16).padStart(2, '0');
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+            
+            // Update and draw arrows
+            arrows.forEach(arrow => {
+                arrow.update();
+                arrow.draw();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+        });
+    </script>
+</body>
+</html>
