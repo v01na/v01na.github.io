@@ -23,6 +23,371 @@
             --danger: #e74c3c;
             --warning: #f39c12;
             --success: #2ecc71;
+            --government: #3498db;
+            --corporate: #9b59b6;
+        }
+
+        body {
+            background-color: var(--primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Навигация */
+        header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            background-color: rgba(10, 25, 47, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(100, 255, 218, 0.1);
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 24px;
+            color: var(--accent);
+        }
+
+        .logo svg {
+            margin-right: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+
+        .nav-links li {
+            margin-left: 25px;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            padding: 8px 16px;
+            border-radius: 4px;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+            background: rgba(100, 255, 218, 0.1);
+        }
+
+        /* Герой секция */
+        .hero {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--primary) 0%, #1a2a6c 100%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
+            max-width: 800px;
+        }
+
+        .hero h1 {
+            font-size: 3.2rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, var(--accent), var(--accent-dark));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 14px 32px;
+            background-color: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-right: 15px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background-color: rgba(100, 255, 218, 0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background-color: rgba(100, 255, 218, 0.1);
+            border-color: var(--accent);
+        }
+
+        /* Секции */
+        section {
+            padding: 100px 0;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 60px;
+            color: var(--text-primary);
+            position: relative;
+        }
+
+        .section-title:after {
+            content: '';
+            display: block;
+            width: 70px;
+            height: 3px;
+            background-color: var(--accent);
+            margin: 15px auto;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto 50px;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+        }
+
+        /* Сетка услуг */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .service-card {
+            background-color: var(--secondary);
+            padding: 30px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(100, 255, 218, 0.1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(100, 255, 218, 0.3);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .service-icon {
+            font-size: 2.5rem;
+            color: var(--accent);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .service-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--text-primary);
+            text-align: center;
+        }
+
+        .service-card p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            flex-grow: 1;
+        }
+
+        .service-features {
+            margin-top: 20px;
+            list-style: none;
+        }
+
+        .service-features li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .service-features li:before {
+            content: '✓';
+            color: var(--accent);
+            position: absolute;
+            left: 0;
+        }
+
+        /* Блок клиентов */
+        .clients-section {
+            background: rgba(10, 25, 47, 0.7);
+        }
+
+        .client-categories {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .client-category {
+            flex: 1;
+            min-width: 300px;
+            max-width: 500px;
+        }
+
+        .category-title {
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .client-list {
+            list-style: none;
+        }
+
+        .client-item {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            background: var(--secondary);
+            border-radius: 5px;
+            border-left: 4px solid var(--government);
+            transition: all 0.3s ease;
+        }
+
+        .client-item.corporate {
+            border-left-color: var(--corporate);
+        }
+
+        .client-item:hover {
+            transform: translateX(5px);
+            background: rgba(17, 34, 64, 0.8);
+        }
+
+        .client-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .client-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .budget-info {
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 8px;
+            padding: 25px;
+            margin-top: 30px;
+            border-left: 4px solid var(--government);
+        }
+
+        .budget-title {
+            color: var(--accent);
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        /* Блок лицензий */
+        .licenses-section {
+            background: rgba(10, 25, 47, 0.7);
+        }
+
+        .licenses-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .license-card {
+            background: var(--secondary);
+            border-radius: 8px;
+            padding: 25px;
+            border-top: 4px solid var(--accent);
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .license-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .license-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .license-icon {
+            font-size: 2rem;
+            color: var(--accent);
+            margin-right: 15px;
+        }
+
+        .license-title {
+            font-size: 1.3rem;
+            color: var(--text-primary);
+        }
+
+        .license-issuer {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+
+        .license-purpose {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+
+        .license-status {
+            display: inline-block;
+            padding: 5px 12px;
+            background: rgba(46, 204, 113, 0.2);
+            color: var(--success);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .license-status.pending {
+            background: rgba(243, 156, 18, 0.2);
+            color: var(--warning);
         }
 
         body {
@@ -1138,7 +1503,7 @@
     <footer>
         <div class="container">
             <div class="logo" style="justify-content: center; margin-bottom: 20px;">
-                <svg style="displayP:none;" width="30" height="30" viewBox="0 0 40 40" fill="none">
+                <svg style="display:none;" width="30" height="30" viewBox="0 0 40 40" fill="none">
                     <path d="M5 20C5 20 10 10 20 10C30 10 35 20 35 20C35 20 30 30 20 30C10 30 5 20 5 20Z" stroke="#64ffda" stroke-width="2"/>
                     <path d="M10 20C10 20 13 15 20 15C27 15 30 20 30 20C30 20 27 25 20 25C13 25 10 20 10 20Z" stroke="#64ffda" stroke-width="2"/>
                     <path d="M15 20C15 20 16 17.5 20 17.5C24 17.5 25 20 25 20C25 20 24 22.5 20 22.5C16 22.5 15 20 15 20Z" stroke="#64ffda" stroke-width="2"/>
