@@ -225,7 +225,7 @@ https://.../sample2.wav"></textarea>
 
     async function fetchServerList(){
       try{
-        var r = await fetch(basePath + '__LIST__.json');
+        var r = await fetch(basePath + 'LIST.json');
         if(!r.ok) throw new Error('HTTP ' + r.status);
         var arr = await r.json();
         if(!Array.isArray(arr)) throw new Error('Invalid JSON list');
