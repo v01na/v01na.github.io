@@ -2,45 +2,55 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <title>V2k Radio Decompiler<!--(Stable, no-backticks)--></title>
+  <title>V2k Radio Decompiler — Live Preview (Stable, decode report)</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
     :root{--bg:#f6f7fb;--card:#fff;--muted:#666}
     body{font-family:Inter, Arial, sans-serif;margin:12px;background:var(--bg);color:#111}
     .wrap{display:flex;gap:12px;align-items:flex-start}
-    .left{width:420px}
+    .left{width:420px;transition:width .25s ease,opacity .25s ease}
+    body.sidebar-collapsed .left{width:0;opacity:0;pointer-events:none}
     .panel{background:var(--card);padding:12px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.06);margin-bottom:12px}
     label{display:block;margin:8px 0}
     button{margin:6px 4px;padding:8px 10px;border-radius:6px;cursor:pointer}
     select,input,textarea{width:100%;box-sizing:border-box;padding:8px;border-radius:6px;border:1px solid #e6e9ef}
-    canvas{background:#fff;border:1px solid #eee;border-radius:6px;display:block}
+    canvas{background:#fff;border:1px solid #eee;border-radius:6px;display:block;width: 100%;max-height: 170px;}
     pre{background:#fafbfd;padding:8px;border-radius:6px;max-height:360px;overflow:auto;white-space:pre-wrap}
     h1{margin:6px 0;font-size:20px}
     .small{font-size:13px;color:var(--muted)}
     .hint{font-size:12px;color:#444;margin-top:6px}
     .row{display:flex;gap:8px;flex-wrap:wrap}
     .note{font-size:13px;color:#333;padding:8px;border-left:3px solid #ffd54f;background:#fff8e1;border-radius:4px}
-    .ok{color:#1b7f3d}
-    .err{color:#b00020}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border-bottom:1px solid #eef;padding:6px 8px;text-align:left}
+    th{background:#f3f5fb;font-weight:600}
+    .badge{display:inline-block;padding:2px 6px;border-radius:999px;background:#eef;color:#333;font-size:12px;margin-left:6px}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#e6f4ea;color:#1b7f3d;font-size:12px}
+    .play{cursor:pointer;text-decoration:underline}
+    .toolbar{display:flex;align-items:center;gap:8px}
+    .ghost{background:#eef;border:1px solid #dde;border-radius:6px;padding:6px 10px}
   </style>
 </head>
 <body>
-  <h1>V2k Radio Decompiler — Live Preview (Stable)</h1>
-
+  <div class="toolbar">
+    <h1 style="flex:1 1 auto;margin-right:8px">V2k Radio Decompiler</h1>
+    <button id="btnToggleSidebar" class="ghost" title="Показать/скрыть левую панель">⟷ Панель</button>
+  </div>
+  <!-- <p class="small">Подробный отчёт: DTW по методам (RMS/centroid/Hilbert), суммарная стоимость, L2‑фильтр, итоговая гипотеза «декодировано как …».</p> -->
   <div class="wrap">
     <div class="left">
       <div class="panel">
         <h3>1) Источник сэмплов</h3>
-        <div class="small">Серверный набор (пример): <code>https://cryptq.github.io/audio/samples_test/samples/</code></div>
-        <div style="margin-top:8px" class="row">
-          <button id="btnRetryList">Загрузить samples/__LIST__.json</button>
-          <button id="btnLoadDemo">Загрузить демо-сэмплы</button>
+        <div class="small">CDN: <code>https://cryptq.github.io/audio/samples_test/samples/</code></div>
+        <div class="row" style="margin-top:8px">
+          <button id="btnRetryList">Загрузить samples/LIST.json</button>
+          <button id="btnLoadDemo">Загрузить демо‑сэмплы</button>
         </div>
-        <label style="margin-top:10px">ИЛИ — загрузите файлы (выбор):</label>
+        <label style="margin-top:10px">ИЛИ — загрузите файлы:</label>
         <input id="fileInput" type="file" accept="audio/*" multiple />
-        <div class="hint">Поддерживаются WAV/MP3/FLAC. Можно сразу выбрать несколько файлов.</div>
+        <div class="hint">WAV/MP3/FLAC. Можно несколько.</div>
         <div style="margin-top:10px">
-          <label>ИЛИ — вставьте список публичных URL (по одному на строку):</label>
+          <label>ИЛИ — вставьте URL (по одному на строке):</label>
           <textarea id="urlList" rows="4" placeholder="https://.../sample1.wav
 https://.../sample2.wav"></textarea>
           <div class="row"><button id="btnLoadUrls">Загрузить URL</button><button id="btnClearList">Очистить список</button></div>
@@ -51,13 +61,13 @@ https://.../sample2.wav"></textarea>
         <h3>2) Выбор образца</h3>
         <label>Выберите пример:</label>
         <select id="sampleSelect"></select>
-        <div style="margin-top:8px" class="row"><button id="btnPlay">Play</button><button id="btnStop">Stop</button></div>
+        <div class="row" style="margin-top:8px"><button id="btnPlay">Play</button><button id="btnStop">Stop</button></div>
         <div class="small" id="sampleInfo"></div>
       </div>
 
       <div class="panel">
         <h3>3) Параметры</h3>
-        <label>env_sr (точек огибающей в секунду): <input id="env_sr" type="number" value="100" min="10" max="2000" step="10" /></label>
+        <label>env_sr (точек/сек): <input id="env_sr" type="number" value="100" min="10" max="2000" step="10" /></label>
         <label>topK (быстрая фильтрация): <input id="topk" type="number" value="10" min="1" max="100" /></label>
         <label>DTW frames (фикс. длина): <input id="dtw_len" type="number" value="80" min="8" max="512" /></label>
         <div style="margin-top:8px">
@@ -80,12 +90,9 @@ https://.../sample2.wav"></textarea>
       </div>
 
       <div class="panel">
-        <h3>О феномене: безопасное резюме</h3>
-        <div class="note">
-          <strong>Что это:</strong> феномен «microwave auditory effect» — восприятие кратких акустических ощущений внутри головы. В этом превью мы занимаемся только пассивным анализом записей (огибающие, сопоставление), без какой-либо генерации излучений.
-        </div>
+        <h3>О феномене</h3>
+        <div class="note"><strong>Важно:</strong> только пассивный анализ записей. Никакой генерации СВЧ‑сигналов.</div>
       </div>
-
     </div>
 
     <div style="flex:1">
@@ -95,439 +102,201 @@ https://.../sample2.wav"></textarea>
         <canvas id="envCanvas" width="900" height="160" style="margin-top:8px"></canvas>
         <canvas id="dtwCanvas" width="900" height="220" style="margin-top:8px"></canvas>
       </div>
-
       <div class="panel">
         <h3>Результаты</h3>
         <pre id="results">Результаты появятся здесь.</pre>
+        <div id="decodeHTML" class="small"></div>
       </div>
     </div>
   </div>
 
-  <script>
-  (function(){
-    'use strict';
+<script>
+(function(){
+  'use strict';
+  // === Кнопка скрытия/показа левой панели ===
+  var toggleBtn = document.getElementById('btnToggleSidebar');
+  toggleBtn.addEventListener('click', function(){
+    document.body.classList.toggle('sidebar-collapsed');
+  });
 
-    // В этой версии нет шаблонных строк (``) — только конкатенация.
+  // === Глобальные переменные/DOM ===
+  var basePath = 'https://cryptq.github.io/audio/samples_test/samples/';
+  var btnRetryList=document.getElementById('btnRetryList');
+  var fileInput=document.getElementById('fileInput');
+  var urlList=document.getElementById('urlList');
+  var btnLoadUrls=document.getElementById('btnLoadUrls');
+  var btnLoadDemo=document.getElementById('btnLoadDemo');
+  var btnClearList=document.getElementById('btnClearList');
+  var sampleSelect=document.getElementById('sampleSelect');
+  var btnPlay=document.getElementById('btnPlay');
+  var btnStop=document.getElementById('btnStop');
+  var btnExtract=document.getElementById('btnExtract');
+  var btnMatch=document.getElementById('btnMatch');
+  var btnExport=document.getElementById('btnExport');
+  var btnSelfTest=document.getElementById('btnSelfTest');
+  var btnUnitTests=document.getElementById('btnUnitTests');
+  var env_sr_input=document.getElementById('env_sr');
+  var topk_input=document.getElementById('topk');
+  var dtw_len_input=document.getElementById('dtw_len');
+  var sampleInfo=document.getElementById('sampleInfo');
+  var logEl=document.getElementById('log');
+  var resultsEl=document.getElementById('results');
+  var decodeHTML=document.getElementById('decodeHTML');
+  var waveCanvas=document.getElementById('waveCanvas');
+  var envCanvas=document.getElementById('envCanvas');
+  var dtwCanvas=document.getElementById('dtwCanvas');
+  var waveCtx=waveCanvas.getContext('2d');
+  var envCtx=envCanvas.getContext('2d');
+  var dtwCtx=dtwCanvas.getContext('2d');
+  var use_rms=document.getElementById('use_rms');
+  var use_centroid=document.getElementById('use_centroid');
+  var use_hilbert=document.getElementById('use_hilbert');
 
-    // Глобальные ссылки
-    var basePath = 'https://cryptq.github.io/audio/samples_test/samples/';
-    var btnRetryList, fileInput, urlList, btnLoadUrls, btnLoadDemo, btnClearList;
-    var sampleSelect, btnPlay, btnStop, btnExtract, btnMatch, btnExport, btnSelfTest, btnUnitTests;
-    var env_sr_input, topk_input, dtw_len_input, sampleInfo, logEl, resultsEl;
-    var waveCanvas, envCanvas, dtwCanvas, waveCtx, envCtx, dtwCtx;
-    var use_rms, use_centroid, use_hilbert;
+  var audioCtx=null, offlineCtx=null, sourceNode=null;
+  var samples=[], currentIndex=-1, lastExtract=null, lastMatchRes=null;
 
-    // Состояние
-    var audioCtx = null;
-    var offlineCtx = null;
-    var sourceNode = null;
-    var samples = [];
-    var currentIndex = -1;
-    var lastExtract = null;
-    var lastMatchRes = null;
+  // === ИНИЦИАЛИЗАЦИЯ ===
+  try{
+    setLog('UI initialized');
+    btnRetryList.addEventListener('click', onFetchServerList);
+    btnLoadDemo.addEventListener('click', function(){ addDemoSamples(); populateSelect(); setLog('Демо‑сэмплы загружены'); });
+    fileInput.addEventListener('change', onFilesSelected);
+    btnLoadUrls.addEventListener('click', onUrlsLoad);
+    if(btnClearList) btnClearList.addEventListener('click', function(){ samples=[]; populateSelect(); setLog('Список очищен'); });
+    sampleSelect.addEventListener('change', function(){ currentIndex=Number(sampleSelect.value); sampleInfo.textContent=samples[currentIndex]?samples[currentIndex].name:'—'; });
+    btnPlay.addEventListener('click', function(){ if(currentIndex>=0) playIndex(currentIndex); else alert('Выберите образец'); });
+    btnStop.addEventListener('click', stopPlayback);
+    btnExtract.addEventListener('click', onExtract);
+    btnMatch.addEventListener('click', function(){ matchSelected().catch(function(e){ console.error(e); alert('Match failed: '+(e&&e.message?e.message:e)); }); });
+    btnExport.addEventListener('click', onExport);
+    btnSelfTest.addEventListener('click', runSelfTest);
+    btnUnitTests.addEventListener('click', runUnitTests);
 
-    // Инициализация
-    try {
-      // UI refs
-      btnRetryList = document.getElementById('btnRetryList');
-      fileInput    = document.getElementById('fileInput');
-      urlList      = document.getElementById('urlList');
-      btnLoadUrls  = document.getElementById('btnLoadUrls');
-      btnLoadDemo  = document.getElementById('btnLoadDemo');
-      btnClearList = document.getElementById('btnClearList');
-      sampleSelect = document.getElementById('sampleSelect');
-      btnPlay      = document.getElementById('btnPlay');
-      btnStop      = document.getElementById('btnStop');
-      btnExtract   = document.getElementById('btnExtract');
-      btnMatch     = document.getElementById('btnMatch');
-      btnExport    = document.getElementById('btnExport');
-      btnSelfTest  = document.getElementById('btnSelfTest');
-      btnUnitTests = document.getElementById('btnUnitTests');
-      env_sr_input = document.getElementById('env_sr');
-      topk_input   = document.getElementById('topk');
-      dtw_len_input= document.getElementById('dtw_len');
-      sampleInfo   = document.getElementById('sampleInfo');
-      logEl        = document.getElementById('log');
-      resultsEl    = document.getElementById('results');
-      waveCanvas   = document.getElementById('waveCanvas');
-      envCanvas    = document.getElementById('envCanvas');
-      dtwCanvas    = document.getElementById('dtwCanvas');
-      waveCtx      = waveCanvas.getContext('2d');
-      envCtx       = envCanvas.getContext('2d');
-      dtwCtx       = dtwCanvas.getContext('2d');
+    addDemoSamples();
+    populateSelect();
+    onFetchServerList();
 
-      use_rms      = document.getElementById('use_rms');
-      use_centroid = document.getElementById('use_centroid');
-      use_hilbert  = document.getElementById('use_hilbert');
+    window.addEventListener('error', function(ev){ console.error('Global error', ev.error||ev.message); setLog('Global error: '+(ev.message||String(ev.error))); });
+    setLog('Final preview ready');
+  }catch(e){ console.error('Fatal init', e); alert('Fatal init: '+(e&&e.message?e.message:e)); }
 
-      setLog('UI initialized');
+  // === Утилиты ===
+  function setLog(msg){ if(logEl) logEl.textContent=new Date().toLocaleTimeString()+' — '+msg; console.log('[V2K]', msg); }
+  function ensureAudioCtx(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+  function safeDecodeAudioData(ab){ ensureAudioCtx(); return new Promise(function(resolve,reject){ try{ var p=audioCtx.decodeAudioData(ab.slice(0)); if(p&&typeof p.then==='function'){ p.then(resolve).catch(reject); return; } }catch(_){} try{ audioCtx.decodeAudioData(ab.slice(0), resolve, reject); }catch(err){ reject(err); } }); }
 
-      // Подписки
-      btnRetryList.addEventListener('click', onFetchServerList);
-      btnLoadDemo.addEventListener('click', function(){ addDemoSamples(); populateSelect(); setLog('Demo-сэмплы загружены'); });
-      fileInput.addEventListener('change', onFilesSelected);
-      btnLoadUrls.addEventListener('click', onUrlsLoad);
-      btnClearList.addEventListener('click', function(){ samples=[]; populateSelect(); setLog('Список очищен'); });
-      sampleSelect.addEventListener('change', function(){ currentIndex = Number(sampleSelect.value); sampleInfo.textContent = samples[currentIndex] ? samples[currentIndex].name : '—'; });
-      btnPlay.addEventListener('click', function(){ if(currentIndex>=0) playIndex(currentIndex); else alert('Выберите образец'); });
-      btnStop.addEventListener('click', stopPlayback);
-      btnExtract.addEventListener('click', onExtract);
-      btnMatch.addEventListener('click', function(){ matchSelected().catch(function(e){ console.error(e); alert('Match failed: '+(e&&e.message?e.message:e)); }); });
-      btnExport.addEventListener('click', onExport);
-      btnSelfTest.addEventListener('click', runSelfTest);
-      btnUnitTests.addEventListener('click', runUnitTests);
+  // === Загрузка LIST.json ===
+  async function onFetchServerList(){ try{ var ok=await fetchServerList(); if(!ok) alert('Не удалось загрузить samples/LIST.json (CORS/404).'); }catch(e){ console.error(e); alert('Ошибка загрузки списка: '+(e&&e.message?e.message:e)); } }
+  async function fetchServerList(){ try{ var r=await fetch(basePath+'LIST.json'); if(!r.ok) throw new Error('HTTP '+r.status); var arr=await r.json(); if(!Array.isArray(arr)) throw new Error('Invalid JSON'); var add=arr.map(function(p){
+      var ps=String(p||'');
+      if(/^https?:\/\//i.test(ps)){
+        return {name: ps.split('/').pop(), src: ps, type: 'server'};
+      }
+      ps = ps.replace(/^\.?\/+/, '');
+      if(ps.toLowerCase().startsWith('samples/')) ps = ps.slice(8);
+      var src = basePath + ps;
+      return {name: ps.split('/').pop(), src: src, type: 'server'};
+    }); samples=samples.concat(add); populateSelect(); setLog('Server list loaded: '+add.length); return true; }catch(e){ setLog('fetchServerList failed: '+(e&&e.message?e.message:e)); return false; } }
 
-      // Автозагрузка
-      addDemoSamples();
+  // === Источники ===
+  function onFilesSelected(ev){ try{ var files=Array.from(ev.target.files||[]); if(!files.length){ setLog('Файлы не выбраны'); return; } var items=files.map(function(f){ return {name:f.name, src:f.name, type:'file', file:f};}); samples=samples.concat(items); populateSelect(); setLog('Loaded local files: '+files.length); }catch(e){ setLog('fileInput error: '+(e&&e.message?e.message:e)); } }
+  function onUrlsLoad(){
+    // Корректная нарезка по строкам на всех платформах (Windows CRLF / Unix LF)
+    try{
+      var lines=(urlList.value||'').split(/\r?\n/).map(function(s){return s.trim();}).filter(Boolean);
+      if(!lines.length) return alert('Вставьте по одному URL на строке');
+      var items=lines.map(function(u){ return {name:String(u).split('/').pop()||u, src:u, type:'url'};});
+      samples=samples.concat(items);
       populateSelect();
-      onFetchServerList();
-
-      window.addEventListener('error', function(ev){ console.error('Global error', ev.error || ev.message); setLog('Global error: '+(ev.message||String(ev.error))); });
-      setLog('Final preview ready');
-    } catch(initErr){
-      console.error('Fatal init error', initErr);
-      alert('Fatal init error: '+(initErr && initErr.message?initErr.message:initErr));
+      setLog('Loaded URLs: '+items.length);
+    }catch(e){
+      setLog('btnLoadUrls error: '+(e&&e.message?e.message:e));
+      alert('Ошибка при обработке URL-ов');
     }
+  }
+  function populateSelect(){ sampleSelect.innerHTML=''; samples.forEach(function(s,i){ var opt=document.createElement('option'); opt.value=String(i); var tag=s.type==='demo'?'demo':(s.type||'src'); opt.textContent=s.name+' ['+tag+']'; sampleSelect.appendChild(opt); }); if(samples.length>0){ sampleSelect.selectedIndex=0; currentIndex=0; sampleInfo.textContent=sampleSelect.options[0].textContent; } else { currentIndex=-1; sampleInfo.textContent='Список пуст.'; } }
 
-    // ====== Логирование ======
-    function setLog(msg){ if(logEl) logEl.textContent = new Date().toLocaleTimeString() + ' — ' + msg; console.log('[V2K]', msg); }
+  // === Буферизация ===
+  async function loadBufferFor(i){ if(!samples[i]) throw new Error('Index out of range'); var e=samples[i]; if(e.buffer) return e.buffer; if(e.type==='demo') return e.buffer; if(e.type==='file'){ var ab=await e.file.arrayBuffer(); e.buffer=await safeDecodeAudioData(ab); return e.buffer; } var r=await fetch(e.src); if(!r.ok) throw new Error('HTTP '+r.status+' for '+e.src); var ab2=await r.arrayBuffer(); e.buffer=await safeDecodeAudioData(ab2); return e.buffer; }
 
-    // ====== Аудиоконтекст ======
-    function ensureAudioCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); return audioCtx; }
+  // === Воспроизведение ===
+  async function playIndex(i){ try{ var buf=await loadBufferFor(i); ensureAudioCtx(); stopPlayback(); var node=audioCtx.createBufferSource(); sourceNode=node; node.buffer=buf; node.connect(audioCtx.destination); node.start(); node.onended=function(){ if(sourceNode===node) sourceNode=null; setLog('Playback ended'); }; drawWaveform(buf); setLog('Playing: '+samples[i].name); }catch(e){ setLog('playIndex error: '+(e&&e.message?e.message:e)); alert('Play failed: '+(e&&e.message?e.message:e)); } }
+  function stopPlayback(){ try{ if(sourceNode){ sourceNode.stop(); sourceNode.disconnect(); sourceNode=null; setLog('Stopped'); } }catch(e){ console.warn(e); } }
 
-    // Строго валидная обработка decodeAudioData
-    function safeDecodeAudioData(ab){
-      ensureAudioCtx();
-      return new Promise(function(resolve, reject){
-        try {
-          var maybe = audioCtx.decodeAudioData(ab.slice(0));
-          if (maybe && typeof maybe.then === 'function') {
-            maybe.then(resolve).catch(reject);
-            return;
-          }
-        } catch(syncErr) { /* fallthrough */ }
-        try {
-          audioCtx.decodeAudioData(ab.slice(0), resolve, reject);
-        } catch(cbErr) { reject(cbErr); }
-      });
-    }
+  // === Базовые DSP ===
+  function toMono(buf){ if(!buf) return new Float32Array(0); if(buf.numberOfChannels===1) return buf.getChannelData(0).slice(0); var L=buf.length,out=new Float32Array(L); for(var ch=0; ch<buf.numberOfChannels; ch++){ var d=buf.getChannelData(ch); for(var i=0;i<L;i++) out[i]+=d[i]/buf.numberOfChannels; } return out; }
+  function normalize(a){ if(!a||!a.length) return a; var mn=Infinity,mx=-Infinity; for(var i=0;i<a.length;i++){ if(a[i]<mn) mn=a[i]; if(a[i]>mx) mx=a[i]; } var den=Math.max(1e-9,mx-mn), out=new Float32Array(a.length); for(var j=0;j<a.length;j++) out[j]=(a[j]-mn)/den; return out; }
+  function linearResample(arr,N){ var out=new Float32Array(N); if(!arr||arr.length===0) return out; var L=arr.length; for(var i=0;i<N;i++){ var t=(N===1?0:i/(N-1)); var pos=t*(L-1); var i0=Math.floor(pos), i1=Math.min(L-1,i0+1); var w=pos-i0; out[i]=(1-w)*(arr[i0]||0)+w*(arr[i1]||0); } return out; }
+  function nextPow2(v){ var p=1; while(p<v) p<<=1; return p; }
+  function fft_inplace(re,im){ var n=re.length,j=0; for(var i=1;i<n;i++){ var bit=n>>1; for(; (j&bit); bit>>=1) j^=bit; j^=bit; if(i<j){ var tr=re[i]; re[i]=re[j]; re[j]=tr; var ti=im[i]; im[i]=im[j]; im[j]=ti; } } for(var len=2; len<=n; len<<=1){ var ang=-2*Math.PI/len, wrlen=Math.cos(ang), wilen=Math.sin(ang); for(i=0;i<n;i+=len){ var wr=1, wi=0; for(var k=0;k<len/2;k++){ var ur=re[i+k], ui=im[i+k]; var vr=re[i+k+len/2]*wr - im[i+k+len/2]*wi; var vi=re[i+k+len/2]*wi + im[i+k+len/2]*wr; re[i+k]=ur+vr; im[i+k]=ui+vi; re[i+k+len/2]=ur-vr; im[i+k+len/2]=ui-vi; var tmp=wr*wrlen - wi*wilen; wi=wr*wilen + wi*wrlen; wr=tmp; } } } }
+  function ifft_inplace(re,im){ for(var i=0;i<im.length;i++) im[i]=-im[i]; fft_inplace(re,im); for(i=0;i<re.length;i++){ re[i]/=re.length; im[i]=-im[i]/re.length; } }
+  function magnitudeSpectrum(frame){ var L=frame.length,N=nextPow2(L); var re=new Float64Array(N), im=new Float64Array(N); for(var i=0;i<L;i++) re[i]=frame[i]; for(i=L;i<N;i++){ re[i]=0; im[i]=0; } fft_inplace(re,im); var M=Math.floor(N/2)+1, mag=new Float32Array(M); for(var k=0;k<M;k++) mag[k]=Math.hypot(re[k],im[k]); return {mag:mag,N:N}; }
+  function analyticEnvelope(frame){ var L=frame.length,N=nextPow2(L); var re=new Float64Array(N), im=new Float64Array(N); for(var i=0;i<L;i++){ re[i]=frame[i]; im[i]=0; } for(i=L;i<N;i++){ re[i]=0; im[i]=0; } fft_inplace(re,im); var half=Math.floor(N/2); for(var k=1;k<half;k++){ re[k]*=2; im[k]*=2; re[N-k]=0; im[N-k]=0; } ifft_inplace(re,im); var env=new Float32Array(L); for(var n=0;n<L;n++) env[n]=Math.hypot(re[n],im[n]); return env; }
+  function spectralCentroidFromFrame(frame, sr){ try{ var spec=magnitudeSpectrum(frame), mag=spec.mag, N=spec.N; var wsum=0,sum=0; for(var k=0;k<mag.length;k++){ var a=mag[k]; var f=k*(sr/N); wsum+=a; sum+=a*f; } return wsum>0?sum/wsum:0; }catch(e){ return 0; } }
 
-    // ====== Источники ======
-    async function onFetchServerList(){
-      try {
-        var ok = await fetchServerList();
-        if(!ok) alert('Не удалось загрузить samples/__LIST__.json (CORS/404). Используйте локальные файлы, URL-ы или демо-сэмплы.');
-      } catch(e){
-        console.error('fetchServerList error', e);
-        alert('Ошибка загрузки списка: '+(e && e.message?e.message:e));
-      }
-    }
+  // === Извлечение огибающих ===
+  async function extractEnvelopes(buffer, env_sr){ if(!buffer) throw new Error('empty buffer'); var sr=buffer.sampleRate||44100; var mono=toMono(buffer); var hop=Math.max(1, Math.floor(sr/env_sr)); var win=Math.min(2048, hop*4); var nFrames=Math.max(1, Math.ceil(mono.length/hop)); var rms=new Float32Array(nFrames), cent=new Float32Array(nFrames), hilb=new Float32Array(nFrames); for(var i=0;i<nFrames;i++){ var start=i*hop; var frame=mono.subarray(start, Math.min(start+win, mono.length)); if(frame.length===0){ rms[i]=cent[i]=hilb[i]=0; continue; } var s=0; for(var j=0;j<frame.length;j++) s+=frame[j]*frame[j]; rms[i]=Math.sqrt(s/Math.max(1,frame.length)); cent[i]=spectralCentroidFromFrame(frame, sr); var aenv=analyticEnvelope(frame), es=0; for(j=0;j<aenv.length;j++) es+=Math.abs(aenv[j]); hilb[i]=es/Math.max(1,aenv.length); } return {rms:normalize(rms), cent:normalize(cent), hilb:normalize(hilb), sr:sr, frames:nFrames}; }
 
-    async function fetchServerList(){
-      try{
-        var r = await fetch(basePath + 'LIST.json');
-        if(!r.ok) throw new Error('HTTP ' + r.status);
-        var arr = await r.json();
-        if(!Array.isArray(arr)) throw new Error('Invalid JSON list');
-        var newItems = arr.map(function(p){ return {name:String(p).split('/').pop(), src:(String(p).startsWith('http')?String(p):basePath+String(p)), type:'server'}; });
-        samples = samples.concat(newItems);
-        populateSelect();
-        setLog('Server list loaded: ' + newItems.length);
-        return true;
-      }catch(e){ setLog('fetchServerList failed: '+(e && e.message?e.message:e)); return false; }
-    }
+  // === Рисование ===
+  function clearCanvas(ctx,W,H){ ctx.clearRect(0,0,W,H); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H); }
+  function drawWaveform(buffer){ try{ clearCanvas(waveCtx, waveCanvas.width, waveCanvas.height); if(!buffer) return; var mono=toMono(buffer); var W=waveCanvas.width,H=waveCanvas.height; waveCtx.beginPath(); waveCtx.strokeStyle='#222'; waveCtx.lineWidth=1; for(var x=0;x<W;x++){ var i=Math.floor(x*(mono.length-1)/(W-1)); var v=mono[i]||0; var y=Math.round((1-(v+1)/2)*H); if(x===0) waveCtx.moveTo(x,y); else waveCtx.lineTo(x,y); } waveCtx.stroke(); }catch(e){ console.error('drawWave',e); } }
+  function drawEnvelopes(env, candidates){ try{ clearCanvas(envCtx, envCanvas.width, envCanvas.height); if(!env) return; var W=envCanvas.width,H=envCanvas.height; var methods=[]; if(use_rms.checked) methods.push({key:'rms',col:'#000',label:'RMS'}); if(use_centroid.checked) methods.push({key:'cent',col:'#2c7',label:'Centroid'}); if(use_hilbert.checked) methods.push({key:'hilb',col:'#e74c3c',label:'Hilbert'}); methods.forEach(function(m){ var arr=env[m.key]; if(!arr) return; var samp=linearResample(arr, W); envCtx.beginPath(); envCtx.lineWidth=(m.key==='rms'?2:1.6); envCtx.strokeStyle=m.col; for(var x=0;x<W;x++){ var y=H - samp[x]*(H-30) - 10; if(x===0) envCtx.moveTo(x,y); else envCtx.lineTo(x,y); } envCtx.stroke(); }); if(Array.isArray(candidates)){ var cols=['#f39c12','#27ae60','#8e44ad','#3498db'], ci=0; candidates.slice(0,4).forEach(function(c){ var col=cols[ci++%cols.length]; ['rms','cent','hilb'].forEach(function(k){ if(!c.env[k]) return; var samp=linearResample(c.env[k], W); envCtx.beginPath(); envCtx.lineWidth=1; envCtx.strokeStyle=col; for(var x=0;x<W;x++){ var y=H - samp[x]*(H-30) - 10; if(x===0) envCtx.moveTo(x,y); else envCtx.lineTo(x,y); } envCtx.stroke(); }); }); } envCtx.fillStyle='#111'; envCtx.font='12px Arial'; var lx=10; methods.forEach(function(m){ envCtx.fillStyle=m.col; envCtx.fillRect(lx,8,14,8); envCtx.fillStyle='#111'; envCtx.fillText(m.label, lx+20, 16); lx+=120; }); }catch(e){ console.error('drawEnvelopes',e); } }
+  function dtw1d(a,b){ var n=a.length,m=b.length; if(n===0||m===0) return {cost:Infinity,path:[]}; var D=new Array(n+1); for(var i=0;i<=n;i++){ D[i]=new Float64Array(m+1); for(var j=0;j<=m;j++) D[i][j]=Infinity; } D[0][0]=0; for(i=1;i<=n;i++){ for(j=1;j<=m;j++){ var d=a[i-1]-b[j-1]; var c=d*d; var v=Math.min(D[i-1][j],D[i][j-1],D[i-1][j-1]); D[i][j]=c+v; } } var ii=n,jj=m,path=[]; while(ii>0&&jj>0){ path.push([ii-1,jj-1]); var v2=Math.min(D[ii-1][jj-1],D[ii-1][jj],D[ii][jj-1]); if(v2===D[ii-1][jj-1]){ii--;jj--;} else if(v2===D[ii-1][jj]){ii--;} else {jj--;} } path.reverse(); return {cost:D[n][m], path:path}; }
+  function drawDTWMatrix(a,b,path){ try{ clearCanvas(dtwCtx, dtwCanvas.width, dtwCanvas.height); if(!a||!b||a.length===0||b.length===0) return; var n=a.length,m=b.length,W=dtwCanvas.width,H=dtwCanvas.height; var maxv=0, C=new Float32Array(n*m); for(var ii=0;ii<n;ii++){ for(var jj=0;jj<m;jj++){ var v=Math.abs(a[ii]-b[jj]); C[ii*m+jj]=v; if(v>maxv) maxv=v; } } var cellW=Math.max(1,Math.floor(W/m)), cellH=Math.max(1,Math.floor(H/n)); for(ii=0;ii<n;ii++){ for(jj=0;jj<m;jj++){ var vv=C[ii*m+jj]/(maxv+1e-9); var col=Math.floor(255*(1-vv)); dtwCtx.fillStyle='rgb('+col+','+col+','+col+')'; dtwCtx.fillRect(jj*cellW, ii*cellH, cellW, cellH); } } if(path&&path.length){ dtwCtx.strokeStyle='#0fb'; dtwCtx.lineWidth=2; dtwCtx.beginPath(); for(var k=0;k<path.length;k++){ var p=path[k]; var x=p[1]*cellW+cellW/2; var y=p[0]*cellH+cellH/2; if(k===0) dtwCtx.moveTo(x,y); else dtwCtx.lineTo(x,y); } dtwCtx.stroke(); } }catch(e){ console.error('drawDTWMatrix',e); } }
+  function l2dist(a,b){ var N=Math.min(a.length,b.length); if(N===0) return Infinity; var s=0; for(var i=0;i<N;i++){ var d=a[i]-b[i]; s+=d*d; } return Math.sqrt(s/N); }
+  function combineFeature(env, dtwLen, use){ var parts=[]; if(use.rms&&env.rms) parts.push(linearResample(env.rms,dtwLen)); if(use.cent&&env.cent) parts.push(linearResample(env.cent,dtwLen)); if(use.hilb&&env.hilb) parts.push(linearResample(env.hilb,dtwLen)); if(parts.length===0) return linearResample(env.rms||env.cent||env.hilb||new Float32Array(dtwLen), dtwLen); var out=new Float32Array(dtwLen); for(var i=0;i<parts.length;i++){ var p=normalize(parts[i]); for(var j=0;j<dtwLen;j++) out[j]+=p[j]||0; } for(var j2=0;j2<dtwLen;j2++) out[j2]/=Math.max(1,parts.length); return out; }
+  function perMethodDTW(qenv,cenv,dtwLen){ var a_r=linearResample(qenv.rms,dtwLen), b_r=linearResample(cenv.rms,dtwLen); var a_c=linearResample(qenv.cent,dtwLen), b_c=linearResample(cenv.cent,dtwLen); var a_h=linearResample(qenv.hilb,dtwLen), b_h=linearResample(cenv.hilb,dtwLen); return {rms:dtw1d(a_r,b_r).cost, cent:dtw1d(a_c,b_c).cost, hilb:dtw1d(a_h,b_h).cost}; }
+  function escapeHTML(s){ return String(s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]); }); }
+  function fmt(x){ return isFinite(x)?Number(x).toFixed(6):'—'; }
+  function renderDecodeTable(queryName, dtwResults, qenv, pool, dtwLen){ if(!decodeHTML) return; if(!dtwResults||!dtwResults.length){ decodeHTML.innerHTML='<div>Нет результатов.</div>'; return; } var best=dtwResults[0]; var html='<div style="margin:6px 0 10px"><span class="pill">Декодировано как: <strong>'+escapeHTML(best.name)+'</strong></span><span class="badge">query: '+escapeHTML(queryName)+'</span></div>'; html+='<table><thead><tr><th>#</th><th>Сэмпл</th><th>DTW (сумм.)</th><th>RMS</th><th>Centroid</th><th>Hilbert</th><th>L2</th><th>Действия</th></tr></thead><tbody>'; for(var i=0;i<Math.min(10,dtwResults.length);i++){ var d=dtwResults[i], cenv=null; for(var pi=0;pi<pool.length;pi++){ if(pool[pi].index===d.index){ cenv=pool[pi].env; break; } } var pm=cenv?perMethodDTW(qenv,cenv,dtwLen):{rms:NaN,cent:NaN,hilb:NaN}; html+='<tr><td>'+(i+1)+'</td><td>'+escapeHTML(d.name)+'</td><td>'+fmt(d.dtw_cost)+'</td><td>'+fmt(pm.rms)+'</td><td>'+fmt(pm.cent)+'</td><td>'+fmt(pm.hilb)+'</td><td>'+fmt(d.coarse_score)+'</td><td><span class="play" data-play-index="'+d.index+'">▶ прослушать</span></td></tr>'; } html+='</tbody></table>'; decodeHTML.innerHTML=html; var links=decodeHTML.querySelectorAll('[data-play-index]'); for(var k=0;k<links.length;k++){ links[k].addEventListener('click', function(ev){ var idx=Number(ev.currentTarget.getAttribute('data-play-index')); if(!isNaN(idx)) playIndex(idx); }); } }
 
-    function onFilesSelected(ev){
-      try {
-        var files = Array.from(ev.target.files || []);
-        if(!files.length){ setLog('Файлы не выбраны'); return; }
-        var items = files.map(function(f){ return {name:f.name, src:f.name, type:'file', file:f}; });
-        samples = samples.concat(items);
-        populateSelect();
-        setLog('Loaded local files: '+files.length);
-      } catch(e){ setLog('fileInput error: '+(e && e.message?e.message:e)); }
-    }
+  // === Пайплайн сопоставления ===
+  async function matchSelected(){ if(currentIndex<0){ alert('Выберите образец'); return; } var entry=samples[currentIndex]; setLog('Matching for: '+entry.name); var bufQ=await loadBufferFor(currentIndex); drawWaveform(bufQ); var env_sr=Math.max(10, parseInt(env_sr_input.value,10)||100); var dtwLen=Math.max(8, parseInt(dtw_len_input.value,10)||80); var topK=Math.max(1, parseInt(topk_input.value,10)||10); var qenv=await extractEnvelopes(bufQ, env_sr); var pool=[]; for(var i=0;i<samples.length;i++){ if(i===currentIndex) continue; try{ var b=await loadBufferFor(i); var env=await extractEnvelopes(b, env_sr); pool.push({index:i, name:samples[i].name, env:env}); }catch(e){ console.warn('skip candidate', samples[i]&&samples[i].src, e&&e.message?e.message:e); } if(pool.length>=200) break; } setLog('Candidates prepared: '+pool.length); var coarse=pool.map(function(p){ return { index:p.index, name:p.name, score:l2dist( linearResample(qenv.rms, Math.min(qenv.rms.length, Math.max(1, Math.floor(env_sr)))), linearResample(p.env.rms, Math.min(qenv.rms.length, Math.max(1, Math.floor(env_sr)))) ), env:p.env }; }); coarse.sort(function(a,b){return a.score-b.score;}); var shortlist=coarse.slice(0, Math.min(topK,coarse.length)); var useFlags={rms:use_rms.checked, cent:use_centroid.checked, hilb:use_hilbert.checked}; var dtwResults=[], qCombo=combineFeature(qenv, dtwLen, useFlags); for(var si=0; si<shortlist.length; si++){ var s=shortlist[si]; try{ var b2=combineFeature(s.env, dtwLen, useFlags); var r=dtw1d(qCombo,b2); dtwResults.push({name:s.name, index:s.index, coarse_score:s.score, dtw_cost:r.cost, path:r.path}); }catch(e){ console.warn('dtw fail', e); } } dtwResults.sort(function(A,B){return A.dtw_cost-B.dtw_cost;}); var topCandidates=[]; for(var ti=0; ti<Math.min(6, dtwResults.length); ti++){ var d=dtwResults[ti]; var envF=null; for(var pi=0; pi<pool.length; pi++){ if(pool[pi].index===d.index){ envF=pool[pi]; break; } } if(envF) topCandidates.push({name:d.name, env:envF.env}); } drawEnvelopes(qenv, topCandidates); if(dtwResults.length>0){ var best=dtwResults[0], cand=null; for(var pi2=0; pi2<pool.length; pi2++){ if(pool[pi2].index===best.index){ cand=pool[pi2]; break; } } if(cand){ var b3=combineFeature(cand.env, dtwLen, useFlags); drawDTWMatrix(qCombo,b3,best.path); } } var out = [
+    'Query: '+entry.name,
+    'Candidates: '+dtwResults.length,
+    '',
+    'Top results (combined DTW):',
+    'No  Name                          DTW_cost',
+    '----------------------------------------'
+  ].join('\n');
+  for(var ri=0; ri<Math.min(10, dtwResults.length); ri++){
+    var rline=dtwResults[ri];
+    var no=String(ri+1);
+    var namePad=(rline.name+Array(31).join(' ')).slice(0,30);
+    out += '\n' + (no.length<3?no+Array(4-no.length).join(' '):no+' ') + ' ' + namePad + ' ' + rline.dtw_cost.toFixed(6);
+  }
+  resultsEl.textContent = out;
+  renderDecodeTable(entry.name, dtwResults, qenv, pool, dtwLen);
+  lastMatchRes={query:entry.name, results:dtwResults};
+  window.__last_match=lastMatchRes;
+  setLog('Match complete'); }
 
-    function onUrlsLoad(){
-      try{
-        var text = (urlList.value || '');
-        var lines = text.split(/\r?\n/).map(function(s){return s.trim();}).filter(Boolean);
-        if(!lines.length) return alert('Вставьте по одному URL на строке');
-        var items = lines.map(function(u){ return {name:String(u).split('/').pop()||u, src:u, type:'url'}; });
-        samples = samples.concat(items);
-        populateSelect();
-        setLog('Loaded URLs: '+items.length);
-      }catch(e){ setLog('btnLoadUrls error: '+(e && e.message?e.message:e)); alert('Ошибка при обработке URL-ов'); }
-    }
+  // === Отдельное извлечение ===
+  async function onExtract(){ try{ if(currentIndex<0) return alert('Выберите образец'); var buf=await loadBufferFor(currentIndex); drawWaveform(buf); var env_sr=Math.max(10, parseInt(env_sr_input.value,10)||100); var env=await extractEnvelopes(buf, env_sr); lastExtract={index:currentIndex, env:env}; window.__last_extract=lastExtract; drawEnvelopes(env, []); resultsEl.textContent='Extracted envelopes for '+samples[currentIndex].name+': rms len='+env.rms.length+', cent len='+env.cent.length+', hilb len='+env.hilb.length; decodeHTML.innerHTML=''; setLog('Extract done'); }catch(e){ console.error('extract error', e); alert('Ошибка извлечения: '+(e&&e.message?e.message:e)); } }
 
-    function populateSelect(){
-      sampleSelect.innerHTML = '';
-      samples.forEach(function(s,i){
-        var opt = document.createElement('option');
-        opt.value = String(i);
-        var tag = s.type==='demo' ? 'demo' : (s.type||'src');
-        opt.textContent = s.name + ' [' + tag + ']';
-        sampleSelect.appendChild(opt);
-      });
-      if(samples.length>0){
-        sampleSelect.selectedIndex = 0;
-        currentIndex = 0;
-        sampleInfo.textContent = sampleSelect.options[0].textContent;
-      } else {
-        currentIndex = -1;
-        sampleInfo.textContent = 'Список пуст.';
-      }
-    }
+  // === Экспорт ===
+  function onExport(){ try{ var payload={ samples:samples.map(function(s){return {name:s.name, src:s.src, type:s.type};}), lastExtract:lastExtract, lastMatchRes:lastMatchRes }; var blob=new Blob([JSON.stringify(payload,null,2)], {type:'application/json'}); var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download='v2k_export.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); setLog('Export saved'); }catch(e){ console.error('export',e); alert('Export failed: '+(e&&e.message?e.message:e)); } }
 
-    // ====== Аудио I/O ======
-    async function loadBufferFor(i){
-      if(!samples[i]) throw new Error('Index out of range');
-      var entry = samples[i];
-      if(entry.buffer) return entry.buffer;
-      if(entry.type === 'demo') return entry.buffer;
-      if(entry.type === 'file'){
-        var ab = await entry.file.arrayBuffer();
-        entry.buffer = await safeDecodeAudioData(ab);
-        return entry.buffer;
-      }
-      var r = await fetch(entry.src);
-      if(!r.ok) throw new Error('HTTP '+r.status+' for '+entry.src);
-      var ab2 = await r.arrayBuffer();
-      entry.buffer = await safeDecodeAudioData(ab2);
-      return entry.buffer;
-    }
+  // === Тесты ===
+  async function runSelfTest(){ try{ addDemoSamples(); populateSelect(); currentIndex=0; sampleSelect.value='0'; var bufQ=await loadBufferFor(currentIndex); var env_sr=120, dtwLen=64; var qenv=await extractEnvelopes(bufQ, env_sr); function comb(env){ return combineFeature(env, dtwLen, {rms:true, cent:true, hilb:true}); } var a=comb(qenv); var b1=comb(await extractEnvelopes(await loadBufferFor(1), env_sr)); var b2=comb(await extractEnvelopes(await loadBufferFor(2), env_sr)); var d1=dtw1d(a,b1).cost, d2=dtw1d(a,b2).cost; resultsEl.textContent = 'Self-test:\n' + ' DTW(a, demo[1])='+d1.toFixed(4)+'\n' + ' DTW(a, demo[2])='+d2.toFixed(4); setLog('Self-test done'); }catch(e){ console.error('self-test',e); alert('Self-test failed: '+(e&&e.message?e.message:e)); } }
+  function runUnitTests(){ var tests=[]; try{ var syntaxOk=false; try{ eval('try{}catch(e){}'); syntaxOk=true; }catch(e){ syntaxOk=false; } tests.push(['Syntax try/catch', syntaxOk]); var rs=linearResample(Float32Array.from([0,1,0,1]),5); tests.push(['linearResample len=5', rs.length===5]); var emptyCost=dtw1d(new Float32Array(0), new Float32Array(10)).cost; tests.push(['DTW guard empty', emptyCost===Infinity]); var mres=magnitudeSpectrum(Float32Array.from([1,0,0,0])); tests.push(['magnitudeSpectrum ok', !!(mres&&mres.mag&&mres.mag.length>0)]); var norm=normalize(Float32Array.from([2,2,2])); tests.push(['normalize const->zeros', norm[0]===0 && norm[1]===0 && norm[2]===0]); var ae=analyticEnvelope(Float32Array.from([0,1,0,1,0,1])); tests.push(['analyticEnvelope length=6', !!ae && ae.length===6]);
+    // Новый тест: корректная нарезка URL-ов по строкам
+    var demoText='http://a\nhttp://b\r\nhttp://c';
+    var splitOk = demoText.split(/\r?\n/).length===3;
+    tests.push(['split /\\r?\\n/ works', splitOk]);
+    // Новый тест: формирование отчёта с \n
+    var reportLines=['A','B','C'].join('\n');
+    tests.push(['join("\\n") produces single string', /A\nB\nC/.test(reportLines)]);
 
-    async function playIndex(i){
-      try{
-        var buf = await loadBufferFor(i);
-        ensureAudioCtx();
-        stopPlayback();
-        var node = audioCtx.createBufferSource();
-        sourceNode = node;
-        node.buffer = buf;
-        node.connect(audioCtx.destination);
-        node.start();
-        node.onended = function(){ if(sourceNode===node) sourceNode = null; setLog('Playback ended'); };
-        drawWaveform(buf);
-        setLog('Playing: ' + samples[i].name);
-      }catch(e){ setLog('playIndex error: '+(e && e.message?e.message:e)); alert('Play failed: '+(e && e.message?e.message:e)); }
-    }
+    var okCount=tests.filter(function(t){return t[1];}).length;
+    var report = tests.map(function(t){ return (t[1]?'[OK] ':'[FAIL] ')+t[0]; }).join('\n');
+    resultsEl.textContent = 'Unit-tests:\n' + report + '\nTotal: ' + okCount + '/' + tests.length;
+    setLog('Unit-tests done');
+  }catch(e){ console.error('Unit-tests fatal', e); alert('Unit-tests fatal: '+(e&&e.message?e.message:e)); } }
 
-    function stopPlayback(){ try{ if(sourceNode){ sourceNode.stop(); sourceNode.disconnect(); sourceNode=null; setLog('Stopped'); } }catch(e){ console.warn(e); } }
-
-    // ====== Утилиты ======
-    function toMono(buffer){ if(!buffer) return new Float32Array(0); if(buffer.numberOfChannels===1) return buffer.getChannelData(0).slice(0); var L = buffer.length; var out = new Float32Array(L); for(var ch=0; ch<buffer.numberOfChannels; ch++){ var data = buffer.getChannelData(ch); for(var i=0;i<L;i++) out[i] += data[i]/buffer.numberOfChannels; } return out; }
-    function normalize(a){ if(!a||!a.length) return a; var mn=Infinity,mx=-Infinity; for(var i=0;i<a.length;i++){ if(a[i]<mn) mn=a[i]; if(a[i]>mx) mx=a[i]; } var denom = Math.max(1e-9, mx-mn); var out = new Float32Array(a.length); for(var j=0;j<a.length;j++) out[j] = (a[j]-mn)/denom; return out; }
-    function linearResample(arr,N){ var out = new Float32Array(N); if(!arr||arr.length===0) return out; var L = arr.length; for(var i=0;i<N;i++){ var t = (N===1?0:i/(N-1)); var pos = t*(L-1); var i0 = Math.floor(pos), i1 = Math.min(L-1,i0+1); var w = pos - i0; out[i] = (1-w)*(arr[i0]||0) + w*(arr[i1]||0); } return out; }
-    function nextPow2(v){ var p=1; while(p<v) p<<=1; return p; }
-
-    // ====== FFT/Hilbert ======
-    function fft_inplace(re,im){ var n=re.length; var j=0; for(var i=1;i<n;i++){ var bit=n>>1; for(; (j & bit); bit >>=1) j ^= bit; j ^= bit; if(i<j){ var tr=re[i]; re[i]=re[j]; re[j]=tr; var ti=im[i]; im[i]=im[j]; im[j]=ti; } } for(var len=2; len<=n; len<<=1){ var ang = -2*Math.PI/len; var wlen_r = Math.cos(ang), wlen_i = Math.sin(ang); for(i=0;i<n;i+=len){ var wr=1, wi=0; for(var k=0;k<len/2;k++){ var u_r=re[i+k], u_i=im[i+k]; var v_r = re[i+k+len/2]*wr - im[i+k+len/2]*wi; var v_i = re[i+k+len/2]*wi + im[i+k+len/2]*wr; re[i+k] = u_r + v_r; im[i+k] = u_i + v_i; re[i+k+len/2] = u_r - v_r; im[i+k+len/2] = u_i - v_i; var tmp = wr*wlen_r - wi*wlen_i; wi = wr*wlen_i + wi*wlen_r; wr = tmp; } } } }
-    function ifft_inplace(re,im){ for(var i=0;i<im.length;i++) im[i] = -im[i]; fft_inplace(re,im); for(i=0;i<re.length;i++){ re[i] /= re.length; im[i] = -im[i]/re.length; } }
-    function magnitudeSpectrum(frame){ var L = frame.length; var N = nextPow2(L); var re = new Float64Array(N); var im = new Float64Array(N); for(var i=0;i<L;i++) re[i]=frame[i]; for(i=L;i<N;i++){ re[i]=0; im[i]=0; } fft_inplace(re,im); var M = Math.floor(N/2)+1; var mag = new Float32Array(M); for(var k=0;k<M;k++) mag[k] = Math.hypot(re[k], im[k]); return {mag:mag,N:N}; }
-    function analyticEnvelope(frame){ var L = frame.length; var N = nextPow2(L); var re = new Float64Array(N); var im = new Float64Array(N); for(var i=0;i<L;i++){ re[i]=frame[i]; im[i]=0; } for(i=L;i<N;i++){ re[i]=0; im[i]=0; } fft_inplace(re,im); var half = Math.floor(N/2); for(var k=1;k<half;k++){ re[k] *= 2; im[k] *= 2; re[N-k]=0; im[N-k]=0; } ifft_inplace(re,im); var env = new Float32Array(L); for(var n=0;n<L;n++) env[n] = Math.hypot(re[n], im[n]); return env; }
-    function spectralCentroidFromFrame(frame, sr){ try{ var spec = magnitudeSpectrum(frame); var mag = spec.mag; var N = spec.N; var freqs = new Float32Array(mag.length); for(var k=0;k<mag.length;k++) freqs[k] = k*(sr/N); var wsum=0, sum=0; for(k=0;k<mag.length;k++){ wsum += mag[k]; sum += mag[k]*freqs[k]; } return wsum>0 ? sum/wsum : 0; }catch(e){ return 0; } }
-
-    // ====== Признаки ======
-    async function extractEnvelopes(buffer, env_sr){
-      if(!buffer) throw new Error('empty buffer');
-      var sr = buffer.sampleRate || 44100;
-      var mono = toMono(buffer);
-      var hop = Math.max(1, Math.floor(sr / env_sr));
-      var win = Math.min(2048, hop*4);
-      var nFrames = Math.max(1, Math.ceil(mono.length / hop));
-      var rms = new Float32Array(nFrames);
-      var cent = new Float32Array(nFrames);
-      var hilb = new Float32Array(nFrames);
-      for(var i=0;i<nFrames;i++){
-        var start = i*hop;
-        var frame = mono.subarray(start, Math.min(start+win, mono.length));
-        if(frame.length===0){ rms[i]=0; cent[i]=0; hilb[i]=0; continue; }
-        var s=0; for(var j=0;j<frame.length;j++) s += frame[j]*frame[j]; rms[i] = Math.sqrt(s/Math.max(1, frame.length));
-        cent[i] = spectralCentroidFromFrame(frame, sr);
-        var aenv = analyticEnvelope(frame); var es=0; for(j=0;j<aenv.length;j++) es += Math.abs(aenv[j]); hilb[i] = es / Math.max(1, aenv.length);
-      }
-      return {rms:normalize(rms), cent:normalize(cent), hilb:normalize(hilb), sr:sr, frames:nFrames};
-    }
-
-    // ====== Отрисовка ======
-    function clearCanvas(ctx, W, H){ ctx.clearRect(0,0,W,H); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H); }
-    function drawWaveform(buffer){ try{ clearCanvas(waveCtx, waveCanvas.width, waveCanvas.height); if(!buffer) return; var mono = toMono(buffer); var W = waveCanvas.width, H = waveCanvas.height; waveCtx.strokeStyle = '#222'; waveCtx.lineWidth = 1; waveCtx.beginPath(); for(var x=0;x<W;x++){ var i = Math.floor(x * (mono.length-1) / (W-1)); var v = mono[i] || 0; var y = Math.round((1 - (v + 1) / 2) * H); if(x===0) waveCtx.moveTo(x,y); else waveCtx.lineTo(x,y); } waveCtx.stroke(); }catch(e){ console.error('drawWave',e); } }
-    function drawEnvelopes(env, candidates){ try{ clearCanvas(envCtx, envCanvas.width, envCanvas.height); if(!env) return; var W = envCanvas.width, H = envCanvas.height; var methods = []; if(use_rms.checked) methods.push({key:'rms', col:'#000', label:'RMS'}); if(use_centroid.checked) methods.push({key:'cent', col:'#2c7', label:'Centroid'}); if(use_hilbert.checked) methods.push({key:'hilb', col:'#e74c3c', label:'Hilbert'});
-        methods.forEach(function(m){ var arr = env[m.key]; if(!arr) return; var samp = linearResample(arr, W); envCtx.beginPath(); envCtx.lineWidth = (m.key==='rms'?2:1.6); envCtx.strokeStyle = m.col; for(var x=0;x<W;x++){ var y = H - samp[x] * (H-30) - 10; if(x===0) envCtx.moveTo(x,y); else envCtx.lineTo(x,y); } envCtx.stroke(); });
-        if(Array.isArray(candidates)){
-          var cols = ['#f39c12','#27ae60','#8e44ad','#3498db']; var ci=0;
-          for(var ci_i=0; ci_i<Math.min(4, candidates.length); ci_i++){
-            var c = candidates[ci_i]; var col = cols[ci++%cols.length]; ['rms','cent','hilb'].forEach(function(k){ if(!c.env[k]) return; var samp = linearResample(c.env[k], W); envCtx.beginPath(); envCtx.lineWidth = 1; envCtx.strokeStyle = col; for(var x=0;x<W;x++){ var y = H - samp[x] * (H-30) - 10; if(x===0) envCtx.moveTo(x,y); else envCtx.lineTo(x,y); } envCtx.stroke(); });
-          }
-        }
-        envCtx.fillStyle='#111'; envCtx.font='12px Arial'; var lx=10; methods.forEach(function(m){ envCtx.fillStyle=m.col; envCtx.fillRect(lx,8,14,8); envCtx.fillStyle='#111'; envCtx.fillText(m.label, lx+20, 16); lx += 120; });
-    }catch(e){ console.error('drawEnvelopes',e); } }
-    function dtw1d(a,b){ var n=a.length, m=b.length; if(n===0||m===0) return {cost:Infinity, path:[]}; var D = new Array(n+1); for(var i=0;i<=n;i++){ D[i] = new Float64Array(m+1); for(var j=0;j<=m;j++) D[i][j] = Infinity; } D[0][0]=0; for(i=1;i<=n;i++){ for(j=1;j<=m;j++){ var diff = a[i-1]-b[j-1]; var cost = diff*diff; var v = Math.min(D[i-1][j], D[i][j-1], D[i-1][j-1]); D[i][j] = cost + v; } } var ii=n, jj=m; var path=[]; while(ii>0 && jj>0){ path.push([ii-1,jj-1]); var v2 = Math.min(D[ii-1][jj-1], D[ii-1][jj], D[ii][jj-1]); if(v2 === D[ii-1][jj-1]){ ii--; jj--; } else if(v2 === D[ii-1][jj]){ ii--; } else { jj--; } } path.reverse(); return {cost: D[n][m], path:path}; }
-    function drawDTWMatrix(a,b,path){ try{ clearCanvas(dtwCtx, dtwCanvas.width, dtwCanvas.height); if(!a||!b||a.length===0||b.length===0) return; var n=a.length, m=b.length; var W = dtwCanvas.width, H = dtwCanvas.height; var maxv=0; var C = new Float32Array(n*m); for(var ii=0;ii<n;ii++){ for(var jj=0;jj<m;jj++){ var v = Math.abs(a[ii]-b[jj]); C[ii*m+jj] = v; if(v>maxv) maxv=v; } } var cellW = Math.max(1, Math.floor(W/m)); var cellH = Math.max(1, Math.floor(H/n)); for(ii=0;ii<n;ii++){ for(jj=0;jj<m;jj++){ var vv = C[ii*m+jj] / (maxv + 1e-9); var col = Math.floor(255*(1-vv)); dtwCtx.fillStyle = 'rgb('+col+','+col+','+col+')'; dtwCtx.fillRect(jj*cellW, ii*cellH, cellW, cellH); } } if(path && path.length){ dtwCtx.strokeStyle='#0fb'; dtwCtx.lineWidth=2; dtwCtx.beginPath(); for(var k=0;k<path.length;k++){ var p = path[k]; var x = p[1]*cellW + cellW/2; var y = p[0]*cellH + cellH/2; if(k===0) dtwCtx.moveTo(x,y); else dtwCtx.lineTo(x,y); } dtwCtx.stroke(); } }catch(e){ console.error('drawDTWMatrix', e); } }
-    function l2dist(a,b){ var N=Math.min(a.length,b.length); if(N===0) return Infinity; var s=0; for(var i=0;i<N;i++){ var d=a[i]-b[i]; s+=d*d; } return Math.sqrt(s/N); }
-
-    // ====== Сопоставление ======
-    async function matchSelected(){
-      if(currentIndex<0){ alert('Выберите образец'); return; }
-      var entry = samples[currentIndex]; setLog('Matching for: '+entry.name);
-      var bufQ = await loadBufferFor(currentIndex);
-      drawWaveform(bufQ);
-      var env_sr = Math.max(10, parseInt(env_sr_input.value,10) || 100);
-      var dtwLen = Math.max(8, parseInt(dtw_len_input.value,10) || 80);
-      var topK = Math.max(1, parseInt(topk_input.value,10) || 10);
-      var qenv = await extractEnvelopes(bufQ, env_sr);
-
-      var pool = [];
-      for(var i=0;i<samples.length;i++){
-        if(i===currentIndex) continue;
-        try { var b = await loadBufferFor(i); var env = await extractEnvelopes(b, env_sr); pool.push({index:i, name:samples[i].name, env:env}); }
-        catch(e){ console.warn('skip candidate', samples[i] && samples[i].src, e && e.message? e.message : e); }
-        if(pool.length>=200) break;
-      }
-
-      setLog('Candidates prepared: '+pool.length);
-
-      var coarse = pool.map(function(p){ return {index:p.index, name:p.name, score: l2dist(linearResample(qenv.rms, Math.min(qenv.rms.length, Math.max(1, Math.floor(env_sr)))), linearResample(p.env.rms, Math.min(qenv.rms.length, Math.max(1, Math.floor(env_sr))))), env:p.env}; });
-      coarse.sort(function(a,b){return a.score-b.score;});
-      var shortlist = coarse.slice(0, Math.min(topK, coarse.length));
-
-      function combine(env){ var parts=[]; if(use_rms.checked && env.rms) parts.push(linearResample(env.rms, dtwLen)); if(use_centroid.checked && env.cent) parts.push(linearResample(env.cent, dtwLen)); if(use_hilbert.checked && env.hilb) parts.push(linearResample(env.hilb, dtwLen)); if(parts.length===0) return linearResample(env.rms||env.cent||env.hilb||new Float32Array(dtwLen), dtwLen); var out=new Float32Array(dtwLen); for(var i=0;i<parts.length;i++){ var p=normalize(parts[i]); for(var j=0;j<dtwLen;j++) out[j]+=p[j]||0; } for(var j2=0;j2<dtwLen;j2++) out[j2]=out[j2]/Math.max(1,parts.length); return out; }
-
-      var dtwResults = [];
-      for(var si=0; si<shortlist.length; si++){
-        var s = shortlist[si];
-        try{ var a = combine(qenv); var b2 = combine(s.env); var r = dtw1d(a,b2); dtwResults.push({name:s.name, index:s.index, coarse_score:s.score, dtw_cost:r.cost, path:r.path}); }
-        catch(e){ console.warn('dtw fail', e); }
-      }
-      dtwResults.sort(function(A,B){return A.dtw_cost-B.dtw_cost;});
-
-      var topCandidates = [];
-      for(var ti=0; ti<Math.min(6, dtwResults.length); ti++){
-        var d = dtwResults[ti];
-        var envF = null;
-        for(var pi=0; pi<pool.length; pi++){ if(pool[pi].index===d.index){ envF = pool[pi]; break; } }
-        if(envF) topCandidates.push({name:d.name, env:envF.env});
-      }
-      drawEnvelopes(qenv, topCandidates);
-      if(dtwResults.length>0){ var best = dtwResults[0]; var a3 = combine(qenv); var cand = null; for(var pi2=0; pi2<pool.length; pi2++){ if(pool[pi2].index===best.index){ cand = pool[pi2]; break; } } if(cand){ var b3 = combine(cand.env); drawDTWMatrix(a3,b3,best.path); } }
-
-      var out = 'Query: ' + entry.name + '\n';
-      out += 'Candidates: ' + dtwResults.length + '\n\nTop results:\n';
-      out += 'No  Name                          DTW_cost\n';
-      out += '----------------------------------------\n';
-      for(var ri=0; ri<Math.min(10, dtwResults.length); ri++){
-        var rline = dtwResults[ri];
-        var no = String(ri+1);
-        var namePadded = (rline.name + Array(31).join(' ')).slice(0,30);
-        out += (no.length<3?no+Array(4-no.length).join(' '):no+' ') + ' ' + namePadded + ' ' + rline.dtw_cost.toFixed(6) + '\n';
-      }
-      resultsEl.textContent = out;
-      lastMatchRes = {query:entry.name, results:dtwResults}; window.__last_match=lastMatchRes; setLog('Match complete');
-    }
-
-    // ====== Действия ======
-    async function onExtract(){
-      try{
-        if(currentIndex<0) return alert('Выберите образец');
-        var buf = await loadBufferFor(currentIndex);
-        drawWaveform(buf);
-        var env_sr = Math.max(10, parseInt(env_sr_input.value,10) || 100);
-        var env = await extractEnvelopes(buf, env_sr);
-        lastExtract = {index: currentIndex, env:env}; window.__last_extract = lastExtract;
-        drawEnvelopes(env, []);
-        resultsEl.textContent = 'Extracted envelopes for ' + samples[currentIndex].name + ': rms len=' + env.rms.length + ', cent len=' + env.cent.length + ', hilb len=' + env.hilb.length;
-        setLog('Extract done');
-      }catch(e){ console.error('extract error', e); alert('Ошибка извлечения: '+(e && e.message?e.message:e)); }
-    }
-
-    function onExport(){
-      try{
-        var payload = {samples: samples.map(function(s){return {name:s.name, src:s.src, type:s.type};}), lastExtract:lastExtract, lastMatchRes:lastMatchRes};
-        var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
-        var url = URL.createObjectURL(blob); var a = document.createElement('a'); a.href = url; a.download = 'v2k_export.json'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); setLog('Export saved');
-      }catch(e){ console.error('export', e); alert('Export failed'); }
-    }
-
-    // ====== Self‑test ======
-    async function runSelfTest(){
-      try{
-        addDemoSamples(); populateSelect();
-        currentIndex = 0; sampleSelect.value = '0';
-        var bufQ = await loadBufferFor(currentIndex);
-        var env_sr = 120; var dtwLen = 64;
-        var qenv = await extractEnvelopes(bufQ, env_sr);
-        function combine(env){ var parts=[]; if(env.rms) parts.push(linearResample(env.rms, dtwLen)); if(env.cent) parts.push(linearResample(env.cent, dtwLen)); if(env.hilb) parts.push(linearResample(env.hilb, dtwLen)); var out=new Float32Array(dtwLen); for(var p_i=0; p_i<parts.length; p_i++){ var pn=normalize(parts[p_i]); for(var j=0;j<dtwLen;j++) out[j]+=pn[j]||0; } for(var j2=0;j2<dtwLen;j2++) out[j2]/=Math.max(1,parts.length); return out; }
-        var a = combine(qenv);
-        var b1 = combine(await extractEnvelopes(await loadBufferFor(1), env_sr));
-        var b2 = combine(await extractEnvelopes(await loadBufferFor(2), env_sr));
-        var d1 = dtw1d(a,b1).cost; var d2 = dtw1d(a,b2).cost;
-        var ok = isFinite(d1)&&isFinite(d2);
-        resultsEl.textContent = 'Self-test:\n DTW(a, demo[1])=' + d1.toFixed(4) + '\n DTW(a, demo[2])=' + d2.toFixed(4) + '\n OK: ' + ok;
-        setLog('Self-test done');
-      }catch(e){ console.error('self-test', e); alert('Self-test failed: '+(e && e.message?e.message:e)); }
-    }
-
-    // ====== Unit‑tests ======
-    function runUnitTests(){
-      var tests = [];
-      try {
-        // Тест 1: eval/try...catch — базовая синтаксическая проверка среды
-        var syntaxOk=false; try { eval('try{ } catch(e){ }'); syntaxOk=true; } catch(e) { syntaxOk=false; }
-        tests.push(['Syntax try/catch', syntaxOk]);
-
-        // Тест 2: linearResample
-        var arr = Float32Array.from([0,1,0,1]);
-        var rs = linearResample(arr, 5);
-        var cond2 = (rs.length===5 && rs[0]===0 && Math.abs(rs[2]-0.6666667)<0.1);
-        tests.push(['linearResample length/shape', cond2]);
-
-        // Тест 3: dtw1d guard
-        var emptyCost = dtw1d(new Float32Array(0), new Float32Array(10)).cost;
-        tests.push(['DTW empty guards', emptyCost===Infinity]);
-
-        // Тест 4: magnitudeSpectrum
-        var mres = magnitudeSpectrum(Float32Array.from([1,0,0,0]));
-        tests.push(['magnitudeSpectrum len>0', mres && mres.mag && mres.mag.length>0]);
-
-        // Тест 5: normalize const-array [2,2,2] -> zeros
-        var norm = normalize(Float32Array.from([2,2,2]));
-        var okConst = norm[0]===0 && norm[1]===0 && norm[2]===0;
-        tests.push(['normalize const array -> zeros', okConst]);
-
-        // Тест 6: analyticEnvelope length conservation
-        var ae = analyticEnvelope(Float32Array.from([0,1,0,1,0,1]));
-        tests.push(['analyticEnvelope length', !!ae && ae.length===6]);
-
-        var okCount = tests.filter(function(t){return t[1];}).length;
-        var report = tests.map(function(t){return (t[1]?'[OK] ':'[FAIL] ') + t[0];}).join('\n');
-        resultsEl.textContent = 'Unit-tests:\n' + report + '\nTotal: ' + okCount + '/' + tests.length;
-        setLog('Unit-tests done');
-      } catch(e) {
-        console.error('Unit-tests fatal', e);
-        alert('Unit-tests fatal: '+(e && e.message?e.message:e));
-      }
-    }
-
-    // ====== Демо-генерация ======
-    function addDemoSamples(){
-      if(!offlineCtx) offlineCtx = new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(1, 48000*2, 48000);
-      var sr = offlineCtx.sampleRate;
-      function synthTone(freq, dur, amFreq, name){ if(freq===undefined) freq=440; if(dur===undefined) dur=0.9; if(amFreq===undefined) amFreq=6; if(!name) name='тон'; var length = Math.floor(dur*sr); var buf = offlineCtx.createBuffer(1,length,sr); var ch = buf.getChannelData(0); for(var n=0;n<length;n++){ var t=n/sr; var am = 0.5*(1+Math.sin(2*Math.PI*amFreq*t)); ch[n] = 0.6*am*Math.sin(2*Math.PI*freq*t); } return {name:name, buffer:buf}; }
-      function synthClickTrain(rate, dur, name){ if(rate===undefined) rate=7; if(dur===undefined) dur=1.1; if(!name) name='щелчки'; var length = Math.floor(dur*sr); var buf = offlineCtx.createBuffer(1,length,sr); var ch = buf.getChannelData(0); var step = Math.max(1, Math.floor(sr/rate)); for(var n=0;n<length;n++){ if(n%step===0){ ch[n]=1.0; if(n+1<length) ch[n+1]=-0.8; } ch[n]*=0.6; } return {name:name, buffer:buf}; }
-      function synthSweep(f0, f1, dur, name){ if(f0===undefined) f0=250; if(f1===undefined) f1=2200; if(dur===undefined) dur=1.2; if(!name) name='свип'; var length = Math.floor(dur*sr); var buf = offlineCtx.createBuffer(1,length,sr); var ch = buf.getChannelData(0); for(var n=0;n<length;n++){ var t=n/sr; var f = f0 * Math.pow(f1/f0, t/dur); ch[n] = 0.55*Math.sin(2*Math.PI*f*t); } return {name:name, buffer:buf}; }
-      var bank = [
-        synthTone(440,0.9,6,'демо-А (низкий тон)'),
-        synthTone(880,0.9,5,'демо-Б (высокий тон)'),
-        synthSweep(250,2200,1.2,'демо-В (свип)'),
-        synthClickTrain(7,1.1,'демо-Г (щелчки)'),
-        synthTone(660,0.9,12,'демо-Д (AM тон)')
-      ];
-      var items = bank.map(function(b){ return {name:b.name, src:'demo', type:'demo', buffer:b.buffer}; });
-      samples = items.concat(samples);
-    }
-
-  })();
-  </script>
+  // === Синтетические демо ===
+  function addDemoSamples(){ if(!offlineCtx) offlineCtx=new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(1, 48000*2, 48000); var sr=offlineCtx.sampleRate; function synthTone(freq,dur,amFreq,name){ freq=freq||440; dur=dur||0.9; amFreq=amFreq||6; name=name||'тон'; var length=Math.floor(dur*sr); var buf=offlineCtx.createBuffer(1,length,sr); var ch=buf.getChannelData(0); for(var n=0;n<length;n++){ var t=n/sr; var am=0.5*(1+Math.sin(2*Math.PI*amFreq*t)); ch[n]=0.6*am*Math.sin(2*Math.PI*freq*t); } return {name:name, buffer:buf}; } function synthClickTrain(rate,dur,name){ rate=rate||7; dur=dur||1.1; name=name||'щелчки'; var length=Math.floor(dur*sr); var buf=offlineCtx.createBuffer(1,length,sr); var ch=buf.getChannelData(0); var step=Math.max(1,Math.floor(sr/rate)); for(var n=0;n<length;n++){ if(n%step===0){ ch[n]=1.0; if(n+1<length) ch[n+1]=-0.8; } ch[n]*=0.6; } return {name:name, buffer:buf}; } function synthSweep(f0,f1,dur,name){ f0=f0||250; f1=f1||2200; dur=dur||1.2; name=name||'свип'; var length=Math.floor(dur*sr); var buf=offlineCtx.createBuffer(1,length,sr); var ch=buf.getChannelData(0); for(var n=0;n<length;n++){ var t=n/sr; var f=f0*Math.pow(f1/f0, t/dur); ch[n]=0.55*Math.sin(2*Math.PI*f*t); } return {name:name, buffer:buf}; } var bank=[ synthTone(440,0.9,6,'демо‑A (низкий тон)'), synthTone(880,0.9,5,'демо‑B (высокий тон)'), synthSweep(250,2200,1.2,'демо‑C (свип)'), synthClickTrain(7,1.1,'демо‑D (щелчки)'), synthTone(660,0.9,12,'демо‑E (AM тон)') ]; var items=bank.map(function(b){ return {name:b.name, src:'demo', type:'demo', buffer:b.buffer}; }); samples=items.concat(samples); }
+})();
+</script>
 </body>
 </html>
