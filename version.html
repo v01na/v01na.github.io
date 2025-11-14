@@ -65,7 +65,7 @@
   <div class="wrap">
     <div class="left">
       <div class="panel">
-        <h3>1) Источник сэмплов</h3>
+        <h3>Источник сэмплов : WAV/MP3/FLAC</h3>
   <!-- <div class="small">CDN: <code>https://cryptq.github.io/audio/samples_test/samples/</code></div> -->
         <div class="row" style="margin-top:8px">
           <button id="btnRetryList">Загрузить CDN</button>
@@ -73,7 +73,7 @@
         </div>
    <!-- <label style="margin-top:10px">ИЛИ — загрузите файлы:</label> -->
         <input id="fileInput" type="file" accept="audio/*" multiple />
-        <div class="hint">WAV/MP3/FLAC.<!--Можно несколько.--></div>
+        <div class="hint"><!--Можно несколько.--></div>
         <div style="margin-top:10px">
   <!-- <label>ИЛИ — вставьте URL (по одному на строке):</label> -->
           <textarea id="urlList" rows="4" placeholder="https://.../sample1.wav&#10;https://.../sample2.wav"></textarea>
@@ -82,7 +82,7 @@
       </div>
 
       <div class="panel">
-        <h3>2) Выбор образца</h3>
+        <h3>Выбор образца</h3>
   <!-- <label>Выберите пример:</label> -->
         <select id="sampleSelect"></select>
         <div class="row" style="margin-top:8px"><button id="btnPlay">Play</button><button id="btnStop">Stop</button></div>
@@ -90,7 +90,7 @@
       </div>
 
       <div class="panel">
-        <h3>3) Параметры</h3>
+        <h3>Параметры</h3>
         <label>env_sr (точек/сек): <input id="env_sr" type="number" value="100" min="10" max="2000" step="10" /></label>
         <label>topK (быстрая фильтрация): <input id="topk" type="number" value="10" min="1" max="100" /></label>
         <label>DTW frames (фикс. длина): <input id="dtw_len" type="number" value="80" min="8" max="512" /></label>
@@ -102,7 +102,7 @@
       </div>
 
       <div class="panel">
-        <h3>4) Действия</h3>
+        <h3>Действия</h3>
         <div class="row">
           <button id="btnExtract">Извлечь огибающие</button>
           <button id="btnMatch">Сопоставить (L2 → DTW)</button>
