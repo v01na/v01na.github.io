@@ -278,12 +278,11 @@
     </style>
 </head>
 <body>
-    <div class="wave-container" style="display:none;">
+    
+  <!-- <div class="wave-container" style="display:none;">
         <canvas id="waveCanvas"></canvas>
         <div class="glow-center"></div>
-    </div>
-    
-
+    </div> -->
         
         <div class="modulation-section">
             <h2 class="section-title">Символы модуляции</h2>
@@ -372,134 +371,5 @@
         </div>
     </div>
     
-  <!--  <script>
-        const canvas = document.getElementById('waveCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Set canvas size
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-        
-        // Wave properties
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-        const numWaves = 15;
-        const maxRadius = Math.max(canvas.width, canvas.height) * 0.8;
-        
-        // Arrow class
-        class Arrow {
-            constructor(radius, angle, color, speed, direction) {
-                this.radius = radius;
-                this.angle = angle;
-                this.color = color;
-                this.speed = speed;
-                this.direction = direction; // 1 for outward, -1 for inward
-                this.size = 15;
-            }
-            
-            update() {
-                this.angle += this.speed * 0.02;
-                this.radius += this.direction * this.speed * 0.5;
-                
-                // Reset position when going out of bounds
-                if (this.direction > 0 && this.radius > maxRadius) {
-                    this.radius = 50;
-                } else if (this.direction < 0 && this.radius < 50) {
-                    this.radius = maxRadius;
-                }
-            }
-            
-            draw() {
-                const x = centerX + Math.cos(this.angle) * this.radius;
-                const y = centerY + Math.sin(this.angle) * this.radius;
-                
-                ctx.save();
-                ctx.translate(x, y);
-                ctx.rotate(this.angle + (this.direction > 0 ? 0 : Math.PI));
-                
-                // Arrow shape
-                ctx.beginPath();
-                ctx.moveTo(this.size, 0);
-                ctx.lineTo(-this.size * 0.5, -this.size * 0.6);
-                ctx.lineTo(-this.size * 0.5, this.size * 0.6);
-                ctx.closePath();
-                
-                // Gradient fill
-                const gradient = ctx.createLinearGradient(-this.size, 0, this.size, 0);
-                gradient.addColorStop(0, this.color + '00');
-                gradient.addColorStop(0.5, this.color);
-                gradient.addColorStop(1, this.color + '00');
-                
-                ctx.fillStyle = this.color;
-                ctx.shadowBlur = 15;
-                ctx.shadowColor = this.color;
-                ctx.fill();
-                
-                ctx.restore();
-            }
-        }
-        
-        // Create arrows
-        const arrows = [];
-        const cyanColor = '#4dd8e8';
-        const orangeColor = '#ff6b4a';
-        const yellowColor = '#ffd700';
-        
-        // Create multiple arrows at different positions
-        for (let i = 0; i < 25; i++) {
-            const angle = (Math.PI * 2 * i) / 25;
-            const radius = 100 + Math.random() * (maxRadius - 100);
-            const colors = [cyanColor, orangeColor, yellowColor];
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            const direction = Math.random() > 0.5 ? 1 : -1;
-            const speed = 0.5 + Math.random() * 1.5;
-            
-            arrows.push(new Arrow(radius, angle, color, speed, direction));
-        }
-        
-        // Animation
-        function animate() {
-            // Update canvas center in case of resize
-            const currentCenterX = canvas.width / 2;
-            const currentCenterY = canvas.height / 2;
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw concentric wave circles
-            for (let i = 0; i < numWaves; i++) {
-                const radius = (maxRadius / numWaves) * (i + 1);
-                
-                ctx.beginPath();
-                ctx.arc(currentCenterX, currentCenterY, radius, 0, Math.PI * 2);
-                
-                // Gradient stroke
-                const opacity = 0.3 - (i / numWaves) * 0.2;
-                const color = i % 3 === 0 ? cyanColor : i % 3 === 1 ? orangeColor : yellowColor;
-                ctx.strokeStyle = color + Math.floor(opacity * 255).toString(16).padStart(2, '0');
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-            
-            // Update and draw arrows
-            arrows.forEach(arrow => {
-                arrow.update();
-                arrow.draw();
-            });
-            
-            requestAnimationFrame(animate);
-        }
-        
-        animate();
-        
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            resizeCanvas();
-        });
-    </script> -->
 </body>
 </html>
