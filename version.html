@@ -14,13 +14,13 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root{--bg:#f6f7fb;--card:#fff;--muted:#666}::-webkit-scrollbar {width: 0;}
-    body{font-family:Inter, Arial, sans-serif;margin:12px;background:var(--bg);color:#111}
+    body{font-family:Inter, Arial, sans-serif;margin:12px;background:var(--bg);color:#111;font-family: monospace;}
     .wrap{display:flex;gap:12px;align-items:flex-start}
     .left{width:420px;transition:width .25s ease,opacity .25s ease}
     body.sidebar-collapsed .left{width:0;opacity:0;pointer-events:none}
     .panel{background:var(--card);padding:12px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.06);margin-bottom:12px}
     label{display:block;margin:8px 0}
-    button{margin:6px 4px;padding:8px 10px;border-radius:6px;cursor:pointer}
+    button{margin:6px 4px;padding:8px 10px;border-radius:6px;cursor:pointer;font-family: monospace;}
     select,input,textarea{width:100%;box-sizing:border-box;padding:8px;border-radius:6px;border:1px solid #e6e9ef}
     canvas{background:#fff;border:1px solid #eee;border-radius:6px;display:block;width:100%;max-height:204px}
     pre{background:#fafbfd;padding:8px;border-radius:6px;max-height:360px;overflow:auto;white-space:pre-wrap}
@@ -47,7 +47,7 @@
 </head>
 <body>
   <div class="toolbar">
-    <h1 style="flex:1 1 auto;margin-right:8px;text-align:center;font-size: 2em;">V2k «Frey Effect» Radio Decompiler</h1>
+    <h1 style="flex:1 1 auto;margin-right:8px;text-align:center;font-size: 2em;font-family: monospace;">V2k «Frey Effect» Radio Decompiler</h1>
     <button id="btnToggleSidebar" class="ghost" title="Показать/скрыть левую панель">⟷</button>
   </div>
   <div id="progress" class="progress-wrap" style="display:none">
