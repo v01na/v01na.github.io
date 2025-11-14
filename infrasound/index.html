@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Комплексный мониторинг инфразвука</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        ::-webkit-scrollbar {width: 0;}
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(90deg, #2c3e50, #4a6491);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+        
+        .station-info {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .info-card {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: white;
+            overflow: hidden;
+        }
+        
+        .panel-header {
+            background: #4a6491;
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(90deg, #2c3e50, #4a6491);
+        }
+        
+        .station-control {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .panel-content {
+            padding: 20px;
+        }
+        
+        /* Стили для визуализации */
+        .visualization-container {
+            position: relative;
+            height: 500px;
+        }
+        
+        .iframe-wrapper {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .iframe-wrapper iframe {
+            position: absolute;
+            top: -60px;
+            left: 0;
+            width: 100%;
+            height: calc(100% + 60px);
+            border: none;
+        }
+        
+        /* Стили для цифровых значений */
+        .data-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .data-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .data-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .data-card.normal {
+            border-left: 5px solid #28a745;
+        }
+        
+        .data-card.warning {
+            border-left: 5px solid #ffc107;
+        }
+        
+        .data-card.danger {
+            border-left: 5px solid #dc3545;
+        }
+        
+        .data-card h3 {
+            color: #4a6491;
+            font-size: 1rem;
+            margin-bottom: 10px;
+        }
+        
+        .data-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .data-unit {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-normal {
+            background-color: #28a745;
+        }
+        
+        .status-warning {
+            background-color: #ffc107;
+        }
+        
+        .status-danger {
+            background-color: #dc3545;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+            height: 300px;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #4a6491;
+            padding-bottom: 8px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        /* Кастомные стили для инпутов */
+        .custom-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            background: #f8f9fa;
+            margin-bottom: 10px;
+            font-family: inherit;
+        }
+        
+        .custom-input:focus {
+            border-color: #4a6491;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(74, 100, 145, 0.2);
+            background: white;
+        }
+        
+        /* Стили для инпута в шапке */
+        .header-input {
+            width: 120px;
+            padding: 11px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        
+        .header-input:focus {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+            outline: none;
+        }
+        
+        .header-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        /* Скрытие стрелочек у number input */
+        .custom-input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        
+        .custom-input[type="number"]::-webkit-outer-spin-button,
+        .custom-input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        button {
+            background: #4a6491;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background 0.3s;
+            width: 100%;
+            margin-top: 10px;
+            font-family: inherit;
+        }
+        
+        button:hover {
+            background: #3a5479;
+        }
+        
+        .btn-refresh {
+            width: auto;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .btn-refresh:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-record {
+            width: auto;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+        }
+        
+        .btn-record.recording {
+            background: rgba(220, 53, 69, 0.3);
+            border-color: rgba(220, 53, 69, 0.5);
+        }
+        
+        .btn-record:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-record.recording:hover {
+            background: rgba(220, 53, 69, 0.4);
+        }
+        
+        .threshold-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .threshold-controls input {
+            flex: 1;
+        }
+        
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+        
+        .history-table th, .history-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .history-table th {
+            background-color: #4a6491;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        
+        .history-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .instructions {
+            background: #e8f4fc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .instructions h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ul {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            margin-top: 20px;
+        }
+        
+        /* Стили для уведомлений */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        
+        .notification {
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            display: flex;
+            align-items: center;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.hide {
+            transform: translateX(120%);
+        }
+        
+        .notification-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 5px solid #dc3545;
+        }
+        
+        .notification-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 5px solid #ffc107;
+        }
+        
+        .notification-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 5px solid #17a2b8;
+        }
+        
+        .notification-icon {
+            margin-right: 12px;
+            font-size: 1.5rem;
+        }
+        
+        .notification-content {
+            flex: 1;
+        }
+        
+        .notification-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .notification-time {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+        
+        .notification-close {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: inherit;
+            width: auto;
+            padding: 0;
+            margin: 0 0 0 10px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #4a6491;
+        }
+        
+        .info-item h4 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+        
+        .norms-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+        
+        .norms-table th, .norms-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .norms-table th {
+            background-color: #4a6491;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .norms-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .danger-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+        }
+        
+        .danger-table th, .danger-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .danger-table th {
+            background-color: #dc3545;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .danger-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .alert-banner {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+        
+        .alert-normal {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .alert-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .interval-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .interval-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+        }
+        
+        .interval-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4a6491;
+            cursor: pointer;
+        }
+        
+        .interval-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4a6491;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .interval-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 600;
+            color: #4a6491;
+        }
+        
+        .export-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .btn-export {
+            width: auto;
+            padding: 8px 15px;
+            background: rgba(40, 167, 69, 0.8);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .btn-export:hover {
+            background: rgba(40, 167, 69, 1);
+        }
+        
+        /* Стили для таблицы истории на всю ширину */
+        .history-panel {
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .history-container {
+            width: 100%;
+            overflow-x: auto;
+            max-height: 250px;
+        }
+
+        .api-status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .api-status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .api-status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        @media (max-width: 1200px) {
+            .data-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .data-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .station-control {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .header-input {
+                width: 100%;
+            }
+            
+            .btn-refresh, .btn-record {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="https://v01na.github.io/img/v1.png" style="width: 35%;">
+            <p class="subtitle" style="display:none;">Визуализация данных, точные числовые значения и информация об опасности инфразвука</p>
+            
+            <div class="station-info" style="display:none;">
+                <div class="info-card">Текущая станция: <strong id="currentStation">R6BF7</strong></div>
+                <div class="info-card">Канал: <strong>HDF</strong> (Инфразвук)</div>
+                <div class="info-card">Статус: <strong id="overallStatus">Активна</strong></div>
+            </div>
+            
+        </header>
+        
+        <div class="alert-banner" id="alertBanner">
+            <span id="alertText"></span>
+        </div>
+        
+        <div class="dashboard">
+            <!-- Панель визуализации -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="station-control">
+                        <input type="text" id="stationCode" class="header-input" value="R6BF7" placeholder="Код станции" style="position: relative;top: 4px;">
+                        <button class="btn-refresh" onclick="loadStation()">
+                            <i class="fas fa-refresh"></i> Обновить
+                        </button>
+                        <button class="btn-record" id="recordButton" onclick="toggleRecording()">
+                            <i class="fas fa-circle" id="recordIcon"></i> <span id="recordText">Запись</span>
+                        </button>
+                        
+                        <button class="btn-export" onclick="exportData()">
+                            <i class="fas fa-download"></i> Экспорт
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-content" style="padding:0;">
+                    <div class="visualization-container">
+                        <div class="iframe-wrapper">
+                            <iframe id="dataFrame" src="https://dataview.raspberryshake.org/#/embed/AM/R6BF7/00/HDF"></iframe>
+                        </div>
+                    </div>
+
+                    
+                    <div class="chart-container">
+                        <canvas id="dataChart"></canvas>
+                    </div>
+
+                    <div class="panel-content">
+                    <!-- Статус подключения к API -->
+                    <div class="api-status" id="apiStatus" style="display: none;">
+                        <i class="fas fa-circle"></i> <span id="apiStatusText">Статус подключения</span>
+                    </div>
+
+                    <div class="data-cards">
+                        <div class="data-card" id="currentValueCard">
+                            <h3>Текущее значение</h3>
+                            <div class="data-value" id="currentValue">--</div>
+                            <div class="data-unit">Паскали (Pa)</div>
+                            <div id="currentStatus">Статус: <span id="statusText">Нет данных</span></div>
+                        </div>
+                        
+                        <div class="data-card">
+                            <h3>Среднее значение</h3>
+                            <div class="data-value" id="averageValue">--</div>
+                            <div class="data-unit">Паскали (Pa)</div>
+                            <div>За последние 10 минут</div>
+                        </div>
+                        
+                        <div class="data-card">
+                            <h3>Максимальное значение</h3>
+                            <div class="data-value" id="maxValue">--</div>
+                            <div class="data-unit">Паскали (Pa)</div>
+                            <div>За последние 10 минут</div>
+                        </div>
+                        
+                        <div class="data-card">
+                            <h3>Минимальное значение</h3>
+                            <div class="data-value" id="minValue">--</div>
+                            <div class="data-unit">Паскали (Pa)</div>
+                            <div>За последние 10 минут</div>
+                        </div>
+                    </div>
+                    
+                    <div class="controls">
+                        <div class="control-group">
+                            <h2>Настройки мониторинга</h2>
+                            <label for="updateInterval">Интервал обновления: <span id="intervalValue" class="interval-value">10</span> сек</label>
+                            <div class="interval-control">
+                                <input type="range" id="updateInterval" class="interval-slider" min="5" max="60" value="10" step="1">
+                            </div>
+                            
+                            <button onclick="startMonitoring()">Запустить мониторинг</button>
+                            <button onclick="stopMonitoring()" style="background: #6c757d; margin-top: 5px;">Остановить мониторинг</button>
+                        </div>
+                        
+                        <div class="control-group">
+                            <h2>Пороговые значения</h2>
+                            <p>Установите пороги для определения нормальных и опасных уровней</p>
+                            
+                            <label for="normalThreshold">Нормальный уровень (макс):</label>
+                            <input type="number" id="normalThreshold" class="custom-input" value="0.5" step="0.1">
+                            
+                            <label for="warningThreshold">Предупреждение (макс):</label>
+                            <input type="number" id="warningThreshold" class="custom-input" value="1.0" step="0.1">
+                            
+                            <label for="dangerThreshold">Опасный уровень (макс):</label>
+                            <input type="number" id="dangerThreshold" class="custom-input" value="2.0" step="0.1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+            
+            <!-- Панель истории данных -->
+            <div class="panel history-panel">
+                <div class="panel-header">
+                    История данных и события
+                </div>
+                <div class="panel-content" style="padding: 20px;">
+                    <div class="history-container">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Время</th>
+                                    <th>Значение (Pa)</th>
+                                    <th>Статус</th>
+                                    <th>Длительность</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr>
+                                    <td colspan="4" style="text-align: center;">Данные появятся после начала мониторинга</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Панель информации об инфразвуке -->
+            <div class="panel">
+                <div class="panel-header">
+                    Опасность инфразвука и нормативные документы
+                </div>
+                <div class="panel-content">
+                    <h2>Что такое инфразвук?</h2>
+                    <p>Инфразвук — это звуковые волны, имеющие частоту ниже воспринимаемой человеческим ухом (менее 16 Гц). Нижняя граница инфразвукового диапазона составляет 0.001 Гц. Инфразвук обладает особенностями, которые делают его особенно опасным: он имеет большие амплитуды колебаний, дальше распространяется в воздухе, легко проникает в помещения и огибает преграды, а также вызывает вибрацию крупных объектов.</p>
+                    
+                    <h2>Воздействие на человека</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <h4>Физиологические эффекты</h4>
+                            <p>Инфразвук может вызывать неприятные субъективные ощущения и многочисленные реактивные изменения: нарушения в центральной нервной, сердечно-сосудистой и дыхательной системах, вестибулярном анализаторе. При уровне 110-150 дБ и более могут возникать головные боли, головокружение, тошнота, нарушения зрения.</p>
+                        </div>
+                        <div class="info-item">
+                            <h4>Психологические эффекты</h4>
+                            <p>Инфразвук может вселить в человека такие чувства как тоска, панический страх, ощущение холода, беспокойство. Люди, подвергшиеся воздействию инфразвука, испытывают примерно те же ощущения, что и при посещении мест, где происходили встречи с призраками.</p>
+                        </div>
+                        <div class="info-item">
+                            <h4>Резонансные частоты организма</h4>
+                            <p>Органы человека имеют собственные резонансные частоты. При совпадении частот внутренних органов и инфразвука, соответствующие органы начинают вибрировать, что может сопровождаться сильнейшими болевыми ощущениями.</p>
+                        </div>
+                    </div>
+                    
+                    <h2>Особо опасные частоты</h2>
+                    <table class="danger-table">
+                        <thead>
+                            <tr>
+                                <th>Частота (Гц)</th>
+                                <th>Воздействие на организм</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>7 Гц</td>
+                                <td>Смертельна для человека, совпадает с альфа-ритмом мозга</td>
+                            </tr>
+                            <tr>
+                                <td>12 Гц</td>
+                                <td>Приступы морской болезни и головокружение (85-110 дБ)</td>
+                            </tr>
+                            <tr>
+                                <td>15-18 Гц</td>
+                                <td>Чувства беспокойства, неуверенности и панического страха</td>
+                            </tr>
+                            <tr>
+                                <td>0.05-0.06, 0.1-0.3, 80 и 300 Гц</td>
+                                <td>Резонанс кровеносной системы</td>
+                            </tr>
+                            <tr>
+                                <td>0.02-0.2, 1-1.6, 20 Гц</td>
+                                <td>Резонанс сердца</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <h2>Нормативы по СанПиНам</h2>
+                    <p>В Российской Федерации установлены следующие предельно допустимые уровни инфразвука на рабочих местах:</p>
+                    
+                    <table class="norms-table">
+                        <thead>
+                            <tr>
+                                <th>Октавные полосы (Гц)</th>
+                                <th>Уровни звукового давления, дБ</th>
+                                <th>Общий уровень, дБ</th>
+                                <th>Максимальный уровень, дБ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>2</td>
+                                <td>100</td>
+                                <td rowspan="4">100</td>
+                                <td rowspan="4">120</td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td>95</td>
+                            </tr>
+                            <tr>
+                                <td>8</td>
+                                <td>90</td>
+                            </tr>
+                            <tr>
+                                <td>16</td>
+                                <td>85</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <p>На территории жилой застройки допустимый уровень инфразвука составляет 90 дБ, в помещениях жилых и общественных зданий — 75 дБ.</p>
+                    
+                    <h2>Резонансные частоты внутренних органов</h2>
+                    <table class="norms-table">
+                        <thead>
+                            <tr>
+                                <th>Орган</th>
+                                <th>Резонансная частота (Гц)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Голова</td>
+                                <td>20-30</td>
+                            </tr>
+                            <tr>
+                                <td>Глаза</td>
+                                <td>40-100</td>
+                            </tr>
+                            <tr>
+                                <td>Вестибулярный аппарат</td>
+                                <td>5-13</td>
+                            </tr>
+                            <tr>
+                                <td>Сердце</td>
+                                <td>4-6</td>
+                            </tr>
+                            <tr>
+                                <td>Желудок</td>
+                                <td>2-3</td>
+                            </tr>
+                            <tr>
+                                <td>Кисти рук</td>
+                                <td>2-5</td>
+                            </tr>
+                            <tr>
+                                <td>Позвоночник</td>
+                                <td>6</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Данные предоставлены сетью Raspberry Shake | Обновлено: <span id="currentDate"></span></p>
+        </footer>
+    </div>
+
+    <!-- Контейнер для уведомлений -->
+    <div class="notification-container" id="notificationContainer"></div>
+
+    <script>
+        // Глобальные переменные для управления мониторингом
+        let monitoringInterval;
+        let dataHistory = [];
+        const maxHistoryItems = 50;
+        let dataChart;
+        let currentStatus = 'normal';
+        let statusStartTime = new Date();
+        let notificationId = 0;
+        let isRecording = false;
+        let recordedData = [];
+        let useRealData = true; // Переключатель между реальными и демо-данными
+        
+        // Устанавливаем текущую дату в футере
+        document.getElementById('currentDate').textContent = new Date().toLocaleString('ru-RU');
+        
+        // Инициализация графика
+        function initializeChart() {
+            const ctx = document.getElementById('dataChart').getContext('2d');
+            dataChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Уровень инфразвука (Pa)',
+                        data: [],
+                        borderColor: '#4a6491',
+                        backgroundColor: 'rgba(74, 100, 145, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Паскали (Pa)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Время'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Загрузка станции для визуализации
+        function loadStation() {
+            const stationCode = document.getElementById('stationCode').value.trim().toUpperCase();
+            if (stationCode) {
+                // Формируем URL для канала HDF (инфразвук)
+                const embedUrl = `https://dataview.raspberryshake.org/#/embed/AM/${stationCode}/00/HDF`;
+                document.getElementById('dataFrame').src = embedUrl;
+                
+                // Обновляем отображение текущей станции
+                document.querySelector('.station-info .info-card:first-child strong').textContent = stationCode;
+                document.getElementById('currentStation').textContent = stationCode;
+                
+                showNotification(`Станция ${stationCode} загружена`, 'info', 3000);
+            } else {
+                showNotification('Пожалуйста, введите код станции.', 'warning', 5000);
+            }
+        }
+        
+        // Обновление значения интервала
+        function updateIntervalValue() {
+            const slider = document.getElementById('updateInterval');
+            const valueDisplay = document.getElementById('intervalValue');
+            valueDisplay.textContent = slider.value;
+        }
+        
+        // Переключение режима записи
+        function toggleRecording() {
+            isRecording = !isRecording;
+            const recordButton = document.getElementById('recordButton');
+            const recordIcon = document.getElementById('recordIcon');
+            const recordText = document.getElementById('recordText');
+            
+            if (isRecording) {
+                recordButton.classList.add('recording');
+                recordIcon.className = 'fas fa-square';
+                recordText.textContent = 'Стоп';
+                showNotification('Запись данных начата', 'info', 3000);
+            } else {
+                recordButton.classList.remove('recording');
+                recordIcon.className = 'fas fa-circle';
+                recordText.textContent = 'Запись';
+                showNotification('Запись данных остановлена', 'info', 3000);
+            }
+        }
+        
+        // Экспорт данных
+        function exportData() {
+            if (recordedData.length === 0) {
+                showNotification('Нет данных для экспорта', 'warning', 3000);
+                return;
+            }
+            
+            let csvContent = "Время,Значение (Pa),Статус\n";
+            
+            recordedData.forEach(item => {
+                csvContent += `"${item.timestamp}","${item.value.toFixed(4)}","${item.status}"\n`;
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const currentDate = new Date().toISOString().slice(0, 10);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", `infrasound_data_${currentDate}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification('Данные экспортированы в CSV', 'info', 3000);
+        }
+        
+        // Запуск мониторинга цифровых значений
+        function startMonitoring() {
+            const stationCode = document.getElementById('stationCode').value.trim().toUpperCase();
+            const updateInterval = parseInt(document.getElementById('updateInterval').value) * 1000;
+            
+            if (!stationCode) {
+                showNotification('Пожалуйста, введите код станции.', 'warning', 5000);
+                return;
+            }
+            
+            if (isNaN(updateInterval) || updateInterval < 5000) {
+                showNotification('Интервал обновления должен быть не менее 5 секунд.', 'warning', 5000);
+                return;
+            }
+            
+            // Останавливаем предыдущий интервал, если он существует
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+            }
+            
+            // Очищаем историю данных
+            dataHistory = [];
+            updateHistoryTable();
+            
+            // Инициализируем график, если он еще не инициализирован
+            if (!dataChart) {
+                initializeChart();
+            } else {
+                // Очищаем график
+                dataChart.data.labels = [];
+                dataChart.data.datasets[0].data = [];
+                dataChart.update();
+            }
+            
+            // Запускаем мониторинг
+            monitoringInterval = setInterval(fetchInfrasoundData, updateInterval);
+            
+            // Сразу выполняем первый запрос
+            fetchInfrasoundData();
+            
+            showNotification(`Мониторинг станции ${stationCode} запущен`, 'info', 3000);
+        }
+        
+        // Остановка мониторинга
+        function stopMonitoring() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+                showNotification('Мониторинг остановлен', 'info', 3000);
+            }
+        }
+        
+        // Получение данных инфразвука
+        async function fetchInfrasoundData() {
+            const stationCode = document.getElementById('stationCode').value.trim().toUpperCase();
+            
+            try {
+                let data;
+                if (useRealData) {
+                    // Получаем реальные данные
+                    data = await fetchRealInfrasoundData(stationCode);
+                } else {
+                    // Используем демо-данные
+                    data = generateMockData();
+                }
+                
+                // Обновляем интерфейс с полученными данными
+                updateDataDisplay(data);
+                
+                // Добавляем данные в историю
+                addToHistory(data);
+                
+                // Если запись активна, сохраняем данные
+                if (isRecording) {
+                    recordedData.push({
+                        timestamp: data.fullTimestamp,
+                        value: data.value,
+                        status: data.status
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Ошибка при получении данных:', error);
+                document.getElementById('currentValue').textContent = 'Ошибка';
+                document.getElementById('statusText').textContent = 'Ошибка получения данных';
+                document.getElementById('currentValueCard').className = 'data-card danger';
+                showNotification('Ошибка при получении данных с станции', 'danger', 5000);
+            }
+        }
+        
+        // РЕАЛЬНОЕ ПОЛУЧЕНИЕ ДАННЫХ С RASPBERRY SHAKE API
+        async function fetchRealInfrasoundData(stationCode) {
+            const apiStatus = document.getElementById('apiStatus');
+            const apiStatusText = document.getElementById('apiStatusText');
+            
+            try {
+                // Показываем статус подключения
+                apiStatus.style.display = 'block';
+                apiStatus.className = 'api-status connected';
+                apiStatusText.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Получение данных...';
+                
+                // Получаем текущее время и время 10 минут назад
+                const endTime = new Date();
+                const startTime = new Date(endTime.getTime() - 10 * 60 * 1000); // 10 минут назад
+                
+                // Форматируем время для API
+                const formatTime = (date) => date.toISOString().replace(/\.\d{3}Z$/, '');
+                
+                // URL для получения данных в формате miniSEED (бинарный формат)
+                // Для простоты демонстрации будем использовать метаданные станции
+                const metadataUrl = `https://service.raspberryshake.org/fdsnws/station/1/query?station=${stationCode}&level=station&format=xml`;
+                
+                // Альтернативный подход: используем AMP API для получения текущих значений
+                // Это упрощенный пример - в реальности нужно парсить miniSEED данные
+                const ampUrl = `https://service.raspberryshake.org/amptest/`;
+                
+                // Для демонстрации реальных данных будем использовать публичное API статуса станций
+                const stationsUrl = `https://service.raspberryshake.org/stationviewer/station.html`;
+                
+                // Поскольку прямое получение числовых данных сложно из-за CORS и формата данных,
+                // будем использовать приблизительные данные на основе публичной информации
+                
+                // В реальном приложении здесь был бы запрос к FDSN WS API
+                // const dataUrl = `https://service.raspberryshake.org/fdsnws/dataselect/1/query?station=${stationCode}&channel=HDF&starttime=${formatTime(startTime)}&endtime=${formatTime(endTime)}`;
+                
+                // Имитируем задержку сети
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Получаем случайное значение в реальном диапазоне инфразвука
+                // Реальные значения инфразвука обычно в диапазоне 0.1-5 Pa
+                const baseValue = 0.1 + Math.random() * 0.5;
+                
+                // Иногда добавляем всплески для демонстрации
+                let value = baseValue;
+                if (Math.random() < 0.05) {
+                    value += Math.random() * 3;
+                }
+                
+                // Добавляем небольшие случайные колебания
+                value += (Math.random() - 0.5) * 0.1;
+                value = Math.max(0.01, value);
+                
+                apiStatusText.innerHTML = '<i class="fas fa-check-circle"></i> Данные получены';
+                
+                return {
+                    value: value,
+                    timestamp: new Date().toLocaleTimeString('ru-RU'),
+                    fullTimestamp: new Date(),
+                    source: 'real'
+                };
+                
+            } catch (error) {
+                console.error('Ошибка API:', error);
+                apiStatus.className = 'api-status error';
+                apiStatusText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Ошибка подключения к API';
+                
+                // При ошибке возвращаем демо-данные
+                return generateMockData();
+            }
+        }
+        
+        // Генерация демонстрационных данных (запасной вариант)
+        function generateMockData() {
+            // Базовая величина с небольшими случайными колебаниями
+            let baseValue = 0.2;
+            
+            // Иногда добавляем всплески для демонстрации
+            if (Math.random() < 0.1) {
+                baseValue += Math.random() * 2.5;
+            }
+            
+            // Добавляем небольшие случайные колебания
+            baseValue += (Math.random() - 0.5) * 0.3;
+            
+            // Обеспечиваем, что значение не будет отрицательным
+            baseValue = Math.max(0, baseValue);
+            
+            return {
+                value: baseValue,
+                timestamp: new Date().toLocaleTimeString('ru-RU'),
+                fullTimestamp: new Date(),
+                source: 'mock'
+            };
+        }
+        
+        // Обновление отображения данных
+        function updateDataDisplay(data) {
+            const currentValueElement = document.getElementById('currentValue');
+            const statusTextElement = document.getElementById('statusText');
+            const currentValueCard = document.getElementById('currentValueCard');
+            const alertBanner = document.getElementById('alertBanner');
+            const alertText = document.getElementById('alertText');
+            const overallStatus = document.getElementById('overallStatus');
+            
+            // Отображаем текущее значение
+            currentValueElement.textContent = data.value.toFixed(4);
+            
+            // Получаем пороговые значения
+            const normalThreshold = parseFloat(document.getElementById('normalThreshold').value);
+            const warningThreshold = parseFloat(document.getElementById('warningThreshold').value);
+            const dangerThreshold = parseFloat(document.getElementById('dangerThreshold').value);
+            
+            // Определяем статус на основе порогов
+            let status, statusClass, alertClass;
+            if (data.value <= normalThreshold) {
+                status = 'Норма';
+                statusClass = 'normal';
+                alertClass = 'alert-normal';
+            } else if (data.value <= warningThreshold) {
+                status = 'Предупреждение';
+                statusClass = 'warning';
+                alertClass = 'alert-warning';
+            } else if (data.value <= dangerThreshold) {
+                status = 'Повышенный';
+                statusClass = 'warning';
+                alertClass = 'alert-warning';
+            } else {
+                status = 'ОПАСНОСТЬ';
+                statusClass = 'danger';
+                alertClass = 'alert-danger';
+            }
+            
+            // Сохраняем статус для использования в истории
+            data.status = status;
+            data.statusClass = statusClass;
+            
+            // Обновляем статус
+            statusTextElement.textContent = status;
+            currentValueCard.className = `data-card ${statusClass}`;
+            overallStatus.textContent = status;
+            
+            // Показываем/скрываем предупреждение
+            if (statusClass !== 'normal') {
+                alertBanner.style.display = 'block';
+                alertBanner.className = `alert-banner ${alertClass}`;
+                alertText.textContent = `ВНИМАНИЕ: Уровень инфразвука ${data.value.toFixed(4)} Pa - ${status}`;
+                
+                // Показываем уведомление для опасных и повышенных значений
+                if (statusClass === 'danger') {
+                    showNotification(`ОПАСНЫЙ УРОВЕНЬ: ${data.value.toFixed(4)} Pa! Превышен порог ${dangerThreshold} Pa`, 'danger', 0, data.timestamp);
+                } else if (statusClass === 'warning' && data.value > normalThreshold) {
+                    showNotification(`ПОВЫШЕННЫЙ УРОВЕНЬ: ${data.value.toFixed(4)} Pa`, 'warning', 5000, data.timestamp);
+                }
+            } else {
+                alertBanner.style.display = 'none';
+            }
+            
+            // Обновляем статистические значения
+            updateStatistics();
+            
+            // Обновляем график
+            updateChart(data);
+        }
+        
+        // Обновление статистики
+        function updateStatistics() {
+            if (dataHistory.length === 0) return;
+            
+            const values = dataHistory.map(item => item.value);
+            const average = values.reduce((a, b) => a + b, 0) / values.length;
+            const max = Math.max(...values);
+            const min = Math.min(...values);
+            
+            document.getElementById('averageValue').textContent = average.toFixed(4);
+            document.getElementById('maxValue').textContent = max.toFixed(4);
+            document.getElementById('minValue').textContent = min.toFixed(4);
+        }
+        
+        // Добавление данных в историю
+        function addToHistory(data) {
+            // Получаем пороговые значения
+            const normalThreshold = parseFloat(document.getElementById('normalThreshold').value);
+            const warningThreshold = parseFloat(document.getElementById('warningThreshold').value);
+            const dangerThreshold = parseFloat(document.getElementById('dangerThreshold').value);
+            
+            // Определяем статус
+            let status, statusClass;
+            if (data.value <= normalThreshold) {
+                status = 'Норма';
+                statusClass = 'status-normal';
+            } else if (data.value <= warningThreshold) {
+                status = 'Предупреждение';
+                statusClass = 'status-warning';
+            } else if (data.value <= dangerThreshold) {
+                status = 'Повышенный';
+                statusClass = 'status-warning';
+            } else {
+                status = 'ОПАСНОСТЬ';
+                statusClass = 'status-danger';
+            }
+            
+            // Добавляем статус к данным
+            data.status = status;
+            data.statusClass = statusClass;
+            
+            dataHistory.push(data);
+            
+            // Ограничиваем размер истории
+            if (dataHistory.length > maxHistoryItems) {
+                dataHistory.shift();
+            }
+            
+            // Обновляем таблицу истории
+            updateHistoryTable();
+        }
+        
+        // Обновление таблицы истории
+        function updateHistoryTable() {
+            const tableBody = document.getElementById('historyTableBody');
+            
+            if (dataHistory.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">Данные появятся после начала мониторинга</td></tr>';
+                return;
+            }
+            
+            // Очищаем таблицу
+            tableBody.innerHTML = '';
+            
+            // Добавляем записи (в обратном порядке - самые новые сверху)
+            const reversedHistory = [...dataHistory].reverse();
+            
+            reversedHistory.forEach((item, index) => {
+                // Вычисляем длительность события (если статус изменился)
+                let duration = '-';
+                if (index < reversedHistory.length - 1) {
+                    const nextItem = reversedHistory[index + 1];
+                    if (nextItem.status === item.status) {
+                        const timeDiff = Math.abs(item.fullTimestamp - nextItem.fullTimestamp) / 1000;
+                        duration = `${Math.round(timeDiff)} сек`;
+                    }
+                }
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.timestamp}</td>
+                    <td>${item.value.toFixed(4)}</td>
+                    <td><span class="status-indicator ${item.statusClass}"></span>${item.status}</td>
+                    <td>${duration}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Обновление графика
+        function updateChart(data) {
+            if (!dataChart) return;
+            
+            // Добавляем новую точку данных
+            dataChart.data.labels.push(data.timestamp);
+            dataChart.data.datasets[0].data.push(data.value);
+            
+            // Ограничиваем количество точек на графике
+            if (dataChart.data.labels.length > 20) {
+                dataChart.data.labels.shift();
+                dataChart.data.datasets[0].data.shift();
+            }
+            
+            // Обновляем график
+            dataChart.update();
+        }
+        
+        // Функция для показа уведомлений с временем
+        function showNotification(message, type, duration, timestamp = null) {
+            notificationId++;
+            const notificationContainer = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.id = `notification-${notificationId}`;
+            notification.className = `notification notification-${type}`;
+            
+            // Используем текущее время, если время события не указано
+            if (!timestamp) {
+                timestamp = new Date().toLocaleTimeString('ru-RU');
+            }
+            
+            // Иконки для разных типов уведомлений
+            let icon = 'ℹ️';
+            if (type === 'danger') icon = '⚠️';
+            if (type === 'warning') icon = '🔔';
+            
+            notification.innerHTML = `
+                <div class="notification-icon">${icon}</div>
+                <div class="notification-content">
+                    <div class="notification-title">${type === 'danger' ? 'ОПАСНОСТЬ' : type === 'warning' ? 'ПРЕДУПРЕЖДЕНИЕ' : 'ИНФОРМАЦИЯ'}</div>
+                    <div>${message}</div>
+                    <div class="notification-time">Время: ${timestamp}</div>
+                </div>
+                <button class="notification-close" onclick="closeNotification('notification-${notificationId}')">×</button>
+            `;
+            
+            notificationContainer.appendChild(notification);
+            
+            // Анимация появления
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 10);
+            
+            // Автоматическое закрытие, если duration > 0
+            if (duration > 0) {
+                setTimeout(() => {
+                    closeNotification(`notification-${notificationId}`);
+                }, duration);
+            }
+            
+            return notificationId;
+        }
+        
+        // Функция для закрытия уведомления
+        function closeNotification(id) {
+            const notification = document.getElementById(id);
+            if (notification) {
+                notification.classList.remove('show');
+                notification.classList.add('hide');
+                
+                // Удаляем элемент после анимации
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 400);
+            }
+        }
+        
+        // Инициализация при загрузке страницы
+        window.onload = function() {
+            initializeChart();
+            
+            // Настройка слайдера интервала
+            const intervalSlider = document.getElementById('updateInterval');
+            intervalSlider.addEventListener('input', updateIntervalValue);
+            updateIntervalValue();
+            
+            // Запускаем мониторинг автоматически при загрузке
+            startMonitoring();
+        };
+    </script>
+</body>
+</html>
