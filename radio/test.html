@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>SDR Multi‑Monitor — 4 iFrames + Modals (macOS UI) v1.4</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --muted:#6b7280; --ink:#0f172a;
+      --bar:#eef2ff; --accent:#4f46e5; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+    ::-webkit-scrollbar{width:0}
+
+    /* Top toolbar */
+    .toolbar{position:sticky;top:0;z-index:5;display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--card);border-bottom:1px solid #e5e7eb;box-shadow:0 2px 12px rgba(0,0,0,.04)}
+    .toolbar h1{margin:0;font-size:16px;font-weight:700}
+    .btn{appearance:none;border:1px solid #e5e7eb;background:#fff;color:#111;padding:8px 10px;border-radius:8px;cursor:pointer}
+    .btn:hover{background:#f9fafb}
+    .btn.primary{border-color:transparent;background:linear-gradient(180deg,#6366f1,#4f46e5);color:#fff}
+
+    /* Grid container fills viewport below toolbar */
+    .grid-wrap{height:calc(100vh - 62px);padding:8px}
+    #grid{display:grid;gap:8px;height:100%;width:100%}
+
+    /* macOS-like window tile */
+    .tile{position:relative;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-width:200px;min-height:120px}
+    .tile.hidden{display:none}
+    .winbar{display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid #eef2ff;background:linear-gradient(180deg,#fff,#f6f7fb)}
+    .traffic{display:flex;gap:8px;align-items:center}
+    .dot{width:12px;height:12px;border-radius:50%}
+    .dot.close{background:#ff6159}
+    .dot.min{background:#ffbd2e}
+    .dot.max{background:#28c840}
+    .title{font-size:13px;color:#111;font-weight:600;flex:0 0 auto}
+    .urlbar{display:flex;gap:6px;align-items:center;margin-left:auto;min-width:220px}
+    .urlbar input{flex:1 1 auto;min-width:140px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:7px}
+    .urlbar button{padding:6px 10px;border-radius:7px;border:1px solid #e5e7eb;background:#fff;cursor:pointer}
+    .urlbar button:hover{background:#f3f4f6}
+
+    .content{position:relative;flex:1 1 auto;background:#000}
+    .content iframe{position:absolute;inset:0;border:0;width:100%;height:100%;background:#000}
+
+    /* Modals */
+    .modal{position:fixed;inset:auto auto 10vh 10vw;width:80vw;height:70vh;background:var(--card);border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.18);display:none;flex-direction:column;z-index:50;resize:both;overflow:hidden}
+    .modal.show{display:flex}
+    .modal .winbar{cursor:move}
+    .modal .content iframe{border:0;width:100%;height:100%}
+    .modal .urlbar input{min-width:100px}
+    .modal .body{position:relative;flex:1 1 auto;display:flex;flex-direction:column}
+    .modal .pane{position:relative;flex:1 1 auto}
+
+    /* Small helpers */
+    .help{font-size:12px;color:var(--muted)}
+    .spacer{flex:1 1 auto}
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <h1>SDR Multi‑Monitor — 4 iFrames + Modals</h1>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn" id="btnOpenInfo">Инструкции</button>
+      <button class="btn" id="btnOpenFrey">Декомпилятор (Frey)</button>
+      <button class="btn" id="btnOpenInfra">Инфразвук</button>
+      <button class="btn primary" id="btnResetLayout">Сбросить макет</button>
+    </div>
+  </div>
+
+  <div class="grid-wrap">
+    <div id="grid"><!-- tiles injected by JS --></div>
+  </div>
+
+  <!-- Modal: Instructions -->
+  <div class="modal" id="modalInfo" style="left:8vw;top:8vh">
+    <div class="winbar">
+      <div class="traffic">
+        <div class="dot close" data-close="#modalInfo" title="Закрыть"></div>
+        <div class="dot min" data-min="#modalInfo" title="Свернуть"></div>
+        <div class="dot max" data-max="#modalInfo" title="Развернуть"></div>
+      </div>
+      <div class="title">Инструкции по отлову артефактов и записи</div>
+      <div class="spacer"></div>
+    </div>
+    <div class="body" style="padding:12px;gap:10px;overflow:auto">
+      <div class="help">
+        <ol>
+          <li><b>Выберите диапазон</b> и включите водопад/спектр. Ищите устойчивые <i>пакетные</i> или <i>импульсные</i> структуры, а также «щелчки/жужжание» на инфранизких огибающих.</li>
+          <li><b>Запись WAV</b>: включайте запись непосредственно в каждом WebSDR‑окне. Предпочтительно 16‑бит 48 кГц (или выше), моно.</li>
+          <li><b>Маркируйте частоту/время</b>: фиксируйте точную частоту, полосу, UTC‑время начала/окончания, ширину полосы приёмника.</li>
+          <li><b>Критерии артефактов</b>: пакеты с аудио‑частотной импульсной огибающей (4–5–20 Гц и т.д.), серии коротких пакетов, повторённые квази‑периодические импульсы.</li>
+          <li><b>После записи</b> используйте модальное окно «Декомпилятор (Frey)», чтобы загрузить WAV и выполнить огибающие/DTW‑сопоставление.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Frey decompiler -->
+  <div class="modal" id="modalFrey" style="left:12vw;top:12vh">
+    <div class="winbar">
+      <div class="traffic">
+        <div class="dot close" data-close="#modalFrey" title="Закрыть"></div>
+        <div class="dot min" data-min="#modalFrey" title="Свернуть"></div>
+        <div class="dot max" data-max="#modalFrey" title="Развернуть"></div>
+      </div>
+      <div class="title">Декомпилятор «Эффекта Фрея»</div>
+      <div class="urlbar">
+        <input id="freyUrl" type="text" value="https://v01na.github.io/frey/" />
+        <button id="freyGo">Перейти</button>
+      </div>
+    </div>
+    <div class="pane content">
+      <iframe id="freyFrame" src="https://v01na.github.io/frey/" allow="autoplay"></iframe>
+    </div>
+  </div>
+
+  <!-- Modal: Infrasound monitor -->
+  <div class="modal" id="modalInfra" style="left:16vw;top:16vh">
+    <div class="winbar">
+      <div class="traffic">
+        <div class="dot close" data-close="#modalInfra" title="Закрыть"></div>
+        <div class="dot min" data-min="#modalInfra" title="Свернуть"></div>
+        <div class="dot max" data-max="#modalInfra" title="Развернуть"></div>
+      </div>
+      <div class="title">Мониторинг инфразвука</div>
+      <div class="urlbar">
+        <input id="infraUrl" type="text" value="https://v01na.github.io/infrasound/" />
+        <button id="infraGo">Перейти</button>
+      </div>
+    </div>
+    <div class="pane content">
+      <iframe id="infraFrame" src="https://v01na.github.io/infrasound/" allow="autoplay"></iframe>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    'use strict';
+
+    // Initial URLs for 4 tiles (may be blocked by X-Frame-Options — это нормально)
+    var SOURCES=[
+      {title:'Череповец websdr.ru', url:'http://websdr.ru/'},
+      {title:'Москва — САО',        url:'http://xdream.sytes.net:13238/'},
+      {title:'Москва — ЗАО',        url:'http://95.165.144.131:8073/'},
+      {title:'Москва — СВАО',       url:'http://ub3aww.ru:8888/'}
+    ];
+
+    var grid=document.getElementById('grid');
+
+    // Build tiles
+    SOURCES.forEach(function(src, idx){ grid.appendChild(makeTile(idx, src.title, src.url)); });
+    updateGrid();
+
+    // Toolbar buttons
+    document.getElementById('btnOpenInfo').addEventListener('click', function(){ openModal('#modalInfo'); });
+    document.getElementById('btnOpenFrey').addEventListener('click', function(){ openModal('#modalFrey'); });
+    document.getElementById('btnOpenInfra').addEventListener('click', function(){ openModal('#modalInfra'); });
+    document.getElementById('btnResetLayout').addEventListener('click', function(){
+      Array.from(document.querySelectorAll('.tile')).forEach(function(t){ t.classList.remove('hidden','maximized','minimized'); t.style.removeProperty('grid-column'); t.style.removeProperty('grid-row'); });
+      updateGrid();
+    });
+
+    // Modal URL handlers
+    document.getElementById('freyGo').addEventListener('click', function(){ var u=document.getElementById('freyUrl').value.trim(); if(u) document.getElementById('freyFrame').src=u; });
+    document.getElementById('infraGo').addEventListener('click', function(){ var u=document.getElementById('infraUrl').value.trim(); if(u) document.getElementById('infraFrame').src=u; });
+
+    // Modal controls (close/min/max) + drag
+    Array.from(document.querySelectorAll('.modal')).forEach(function(mod){
+      wiringModal(mod);
+    });
+
+    function openModal(sel){ var m=document.querySelector(sel); if(!m) return; m.classList.add('show'); bringFront(m); }
+    function closeModal(mod){ mod.classList.remove('show'); }
+
+    function wiringModal(mod){
+      // traffic lights
+      var btnClose=mod.querySelector('.dot.close'); if(btnClose) btnClose.addEventListener('click', function(){ closeModal(mod); });
+      var btnMin=mod.querySelector('.dot.min'); if(btnMin) btnMin.addEventListener('click', function(){ mod.style.height='38px'; });
+      var btnMax=mod.querySelector('.dot.max'); if(btnMax) btnMax.addEventListener('click', function(){ mod.style.left='5vw'; mod.style.top='6vh'; mod.style.width='90vw'; mod.style.height='86vh'; bringFront(mod); });
+
+      // draggable by winbar
+      var bar=mod.querySelector('.winbar');
+      var dragging=false, sx=0, sy=0, sl=0, st=0;
+      function onDown(e){ dragging=true; sx=e.clientX; sy=e.clientY; var rect=mod.getBoundingClientRect(); sl=rect.left; st=rect.top; bringFront(mod); document.addEventListener('mousemove', onMove); document.addEventListener('mouseup', onUp); }
+      function onMove(e){ if(!dragging) return; var nx=sl+(e.clientX-sx); var ny=st+(e.clientY-sy); mod.style.left=Math.max(0, nx)+'px'; mod.style.top=Math.max(0, ny)+'px'; }
+      function onUp(){ dragging=false; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); }
+      if(bar) bar.addEventListener('mousedown', onDown);
+
+      // focus on click (z-index stacking)
+      mod.addEventListener('mousedown', function(){ bringFront(mod); });
+
+      // Generic closers from data-attributes
+      Array.from(mod.querySelectorAll('[data-close]')).forEach(function(btn){ btn.addEventListener('click', function(){ closeModal(mod); }); });
+      Array.from(mod.querySelectorAll('[data-min]')).forEach(function(btn){ btn.addEventListener('click', function(){ mod.style.height='38px'; }); });
+      Array.from(mod.querySelectorAll('[data-max]')).forEach(function(btn){ btn.addEventListener('click', function(){ mod.style.left='5vw'; mod.style.top='6vh'; mod.style.width='90vw'; mod.style.height='86vh'; bringFront(mod); }); });
+    }
+
+    var __z=100; function bringFront(el){ __z+=1; el.style.zIndex=String(__z); }
+
+    function makeTile(idx, title, url){
+      var tile=document.createElement('div'); tile.className='tile'; tile.dataset.index=String(idx);
+      tile.innerHTML=
+        '<div class="winbar">\
+          <div class="traffic">\
+            <div class="dot close" title="Закрыть"></div>\
+            <div class="dot min" title="Свернуть"></div>\
+            <div class="dot max" title="Развернуть"></div>\
+          </div>\
+          <div class="title">'+escapeHTML(title)+'</div>\
+          <div class="urlbar">\
+            <input type="text" value="'+escapeAttr(url)+'" placeholder="https://..." />\
+            <button class="go">Go</button>\
+          </div>\
+        </div>\
+        <div class="content">\
+          <iframe src="'+escapeAttr(url)+'" allow="autoplay"></iframe>\
+        </div>';
+
+      // Wire controls
+      var iframe=tile.querySelector('iframe');
+      var input=tile.querySelector('input');
+      var btnGo=tile.querySelector('button.go');
+      var btnClose=tile.querySelector('.dot.close');
+      var btnMin=tile.querySelector('.dot.min');
+      var btnMax=tile.querySelector('.dot.max');
+
+      if(btnGo) btnGo.addEventListener('click', function(){ var u=input.value.trim(); if(u){ iframe.src=u; } });
+      if(btnClose) btnClose.addEventListener('click', function(){ tile.classList.add('hidden'); updateGrid(); });
+      if(btnMin) btnMin.addEventListener('click', function(){ tile.classList.add('hidden'); updateGrid(); });
+      if(btnMax) btnMax.addEventListener('click', function(){ maximizeTile(tile); });
+
+      // double-click title to toggle maximize
+      var titleEl=tile.querySelector('.title');
+      if(titleEl) titleEl.addEventListener('dblclick', function(){ maximizeTile(tile); });
+
+      return tile;
+    }
+
+    function maximizeTile(tile){
+      var all=Array.from(document.querySelectorAll('.tile'));
+      var isMax=tile.classList.contains('maximized');
+      all.forEach(function(t){ t.classList.remove('maximized'); });
+      if(isMax){ // restore
+        all.forEach(function(t){ if(t.classList.contains('hidden-keep')){ t.classList.remove('hidden-keep'); t.classList.remove('hidden'); } });
+      }else{
+        all.forEach(function(t){ if(t!==tile && !t.classList.contains('hidden')){ t.classList.add('hidden'); t.classList.add('hidden-keep'); } });
+        tile.classList.add('maximized');
+      }
+      updateGrid();
+    }
+
+    function updateGrid(){
+      var tiles=Array.from(document.querySelectorAll('.tile'));
+      var visible=tiles.filter(function(t){ return !t.classList.contains('hidden'); });
+      var n=visible.length;
+      // Grid rules: 4->2x2; 3->2x2; 2->2x1; 1->1x1
+      if(n<=1){ grid.style.gridTemplateColumns='1fr'; grid.style.gridTemplateRows='1fr'; }
+      else if(n===2){ grid.style.gridTemplateColumns='1fr 1fr'; grid.style.gridTemplateRows='1fr'; }
+      else { grid.style.gridTemplateColumns='1fr 1fr'; grid.style.gridTemplateRows='1fr 1fr'; }
+    }
+
+    // Helpers for escaping
+    function escapeHTML(s){ return String(s).replace(/[&<>]/g, function(ch){ return ({'&':'&amp;','<':'&lt;','>':'&gt;'})[ch]; }); }
+    function escapeAttr(s){ return String(s).replace(/["&<>]/g, function(ch){ return ({'"':'&quot;','&':'&amp;','<':'&lt;','>':'&gt;'})[ch]; }); }
+
+  })();
+  </script>
+</body>
+</html>
