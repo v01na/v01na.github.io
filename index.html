@@ -1729,7 +1729,21 @@
                 header.style.backgroundColor = 'rgba(10, 25, 47, 0.95)';
             }
         });
-    </script> <script async src="https://www.googletagmanager.com/gtag/js?id=G-SWZSWM63WQ"></script>
+    </script> <script>
+  // Initialize the agent on page load.
+  const fpPromise = import('https://fpjscdn.net/v3/LmZ9SDlyEX4H2s6BZwl8')
+    .then(FingerprintJS => FingerprintJS.load({
+      region: "eu"
+    }))
+
+  // Get the visitorId when you need it.
+  fpPromise
+    .then(fp => fp.get())
+    .then(result => {
+      const visitorId = result.visitorId
+      console.log(visitorId)
+    })
+</script> <script async src="https://www.googletagmanager.com/gtag/js?id=G-SWZSWM63WQ"></script>
    <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
