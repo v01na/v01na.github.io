@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Защита от комбинированных деструктивных воздействий: Эффект Фрея + Инфразвук</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --ink:#111; --muted:#667; 
+      --accent:#0b7; --danger:#e74c3c; --warning:#f39c12; --safe:#27ae60;
+      --infrasound:#8e44ad; --frey:#3498db; --synergy:#e67e22;
+      --grid:#e9ecf3;
+    }
+    ::-webkit-scrollbar{width:0;}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,Arial,sans-serif}
+    .wrap{max-width:1100px;margin:24px auto;padding:0 14px}
+    h1{font-size:28px;margin:16px 0}
+    h2{margin-top:28px}
+    .card{background:var(--card);border-radius:12px;box-shadow:0 10px 24px rgba(0,0,0,.05);padding:16px;margin:14px 0}
+    .muted{color:var(--muted)}
+    code,pre{background:#f9fafc;border:1px solid #eef2f7;border-radius:8px;padding:2px 6px}
+    pre{padding:10px;overflow:auto}
+    .grid{background:linear-gradient(transparent 23px,var(--grid) 24px),linear-gradient(90deg,transparent 23px,var(--grid) 24px);background-size:24px 24px}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .col{flex:1;min-width:280px}
+    .legend{font-size:12px;color:#333;margin-top:6px}
+    .badge{display:inline-block;border-radius:999px;padding:2px 8px;font-size:12px}
+    .badge-danger{background:#ffe9e9;border:1px solid #f3bdbd;color:#7b0606}
+    .badge-warning{background:#fff4e9;border:1px solid #f3d8bd;color:#7b4a06}
+    .badge-safe{background:#e9fff0;border:1px solid #bdf3cf;color:#067b2d}
+    .badge-infrasound{background:#f3e9ff;border:1px solid #d8bdf3;color:#4a067b}
+    .badge-frey{background:#e9f4ff;border:1px solid #bdd8f3;color:#06367b}
+    .badge-synergy{background:#fff0e9;border:1px solid #f3cfbd;color:#7b2d06}
+    .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .kpi .card{padding:10px;text-align:center}
+    .frey-diagram{background:#f8f9fa;border-radius:8px;padding:16px;margin:12px 0}
+    .comparison-table{width:100%;border-collapse:collapse;margin:12px 0}
+    .comparison-table td,.comparison-table th{border:1px solid #e0e0e0;padding:8px 12px;text-align:left}
+    .comparison-table th{background:#f0f3f8}
+    .protection-grid{display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:16px;margin:20px 0}
+    .protection-card{border-left:4px solid var(--safe);padding:12px;background:#f9fdfb}
+    .protection-card.danger{border-left-color:var(--danger);background:#fdf9f9}
+    .protection-card.warning{border-left-color:var(--warning);background:#fffdf9}
+    .protection-card.infrasound{border-left-color:var(--infrasound);background:#f9f9fd}
+    .protection-card.frey{border-left-color:var(--frey);background:#f9fdff}
+    .protection-card.synergy{border-left-color:var(--synergy);background:#fffbf9}
+    .threat-level{display:inline-block;padding:4px 12px;border-radius:4px;font-weight:bold;margin:4px 0}
+    .threat-high{background:#ffebee;color:#c62828}
+    .threat-medium{background:#fff8e1;color:#f57f17}
+    .threat-low{background:#e8f5e9;color:#2e7d32}
+    .countermeasure{background:#e3f2fd;border-radius:8px;padding:12px;margin:8px 0}
+    .frequency-table{width:100%;border-collapse:collapse;margin:12px 0}
+    .frequency-table td,.frequency-table th{border:1px solid #e0e0e0;padding:8px 12px;text-align:center}
+    .frequency-table th{background:#f0f3f8}
+    .resonance-cell{font-weight:bold}
+    .resonance-1{background:#ffebee}
+    .resonance-2{background:#fff8e1}
+    .resonance-3{background:#e8f5e9}
+    .resonance-4{background:#e3f2fd}
+    .resonance-5{background:#f3e5f5}
+    .synergy-diagram{display:flex;justify-content:space-between;align-items:center;padding:20px;background:#f8f9fa;border-radius:12px;margin:16px 0}
+    .synergy-element{text-align:center;padding:10px;border-radius:8px;width:30%}
+    .plus-sign{font-size:24px;font-weight:bold;color:#666}
+    
+    /* Кнопки инструментов */
+    .tools-container {display: flex; gap: 16px; justify-content: center; margin: 20px 0;}
+    .tool-btn {padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px;}
+    .frey-btn {background: var(--frey); color: white;}
+    .infrasound-btn {background: var(--infrasound); color: white;}
+    .tool-btn:hover {transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2);}
+    
+    /* Модальные окна */
+    .modal {display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);}
+    .modal-content {position: relative; margin: 2% auto; width: 95%; height: 90%; background-color: white; border-radius: 12px; overflow: hidden;}
+    .close {position: absolute; top: 15px; right: 25px; color: white; font-size: 35px; font-weight: bold; cursor: pointer; z-index: 1001;}
+    .close:hover {color: #ccc;}
+    .modal-iframe {width: 100%; height: 100%; border: 0;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Логотип -->
+  <center>
+    <img src="https://v01na.github.io/img/v.png" style="width: 35%;">
+  </center>
+  
+  <h1 style="text-align: center; color: #c62828;">
+    🛡️ Защита от комбинированных воздействий: <br> Эффект Фрея + Инфразвук
+  </h1>
+  <p class="muted" style="text-align: center;">
+    Комплексная система обнаружения, противодействия и защиты от синергетического микроволнового и инфразвукового воздействия
+  </p>
+
+  <!-- Кнопки инструментов -->
+  <div class="tools-container">
+    <button class="tool-btn frey-btn" onclick="openModal('freyModal')">
+      <span>🔊 Демодулятор «Эффекта Фрея»</span>
+    </button>
+    <button class="tool-btn infrasound-btn" onclick="openModal('infrasoundModal')">
+      <span>📉 Монитор инфразвука</span>
+    </button>
+  </div>
+
+  <!-- Модальные окна -->
+  <div id="freyModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('freyModal')">&times;</span>
+      <iframe class="modal-iframe" src="https://v01na.github.io/frey/"></iframe>
+    </div>
+  </div>
+
+  <div id="infrasoundModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal('infrasoundModal')">&times;</span>
+      <iframe class="modal-iframe" src="https://v01na.github.io/infrasound/"></iframe>
+    </div>
+  </div>
+
+  <!-- СИНЕРГЕТИЧЕСКИЙ ЭФФЕКТ -->
+  <div class="card">
+    <h2>⚡ Синергетический эффект комбинированного воздействия</h2>
+    
+    <div class="synergy-diagram">
+      <div class="synergy-element" style="background:#e9f4ff;">
+        <h3>«Эффекта Фрея»</h3>
+        <div class="badge badge-frey">Микроволны</div>
+        <ul style="text-align:left;font-size:14px;">
+          <li>Внушение через слуховой канал</li>
+          <li>Прямое воздействие на мозг</li>
+          <li>Скрытая передача команд</li>
+        </ul>
+      </div>
+      
+      <div class="plus-sign">+</div>
+      
+      <div class="synergy-element" style="background:#f3e9ff;">
+        <h3>Инфразвук</h3>
+        <div class="badge badge-infrasound">Низкие частоты</div>
+        <ul style="text-align:left;font-size:14px;">
+          <li>Физиологический дискомфорт</li>
+          <li>Эмоциональная дестабилизация</li>
+          <li>Резонанс органов</li>
+        </ul>
+      </div>
+      
+      <div class="plus-sign">=</div>
+      
+      <div class="synergy-element" style="background:#fff0e9;">
+        <h3>Синергетический эффект</h3>
+        <div class="badge badge-synergy">Усиление воздействия</div>
+        <ul style="text-align:left;font-size:14px;">
+          <li>Повышенная внушаемость</li>
+          <li>Критическое состояние</li>
+          <li>Полный контроль сознания</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="countermeasure" style="background:#fff8e1;">
+      <h4>🔍 Механизм синергетического воздействия:</h4>
+      <p><strong>Фаза 1: Инфразвуковая дестабилизация (0-30 секунд)</strong></p>
+      <ul>
+        <li>Резонанс внутренних органов на частотах 4-8 Гц вызывает физический дискомфорт</li>
+        <li>Вестибулярный аппарат (0.5-13 Гц) нарушает чувство равновесия</li>
+        <li>Альфа-ритм мозга (7-13 Гц) десинхронизируется, вызывая спутанность сознания</li>
+        <li>Беспричинная тревога и паника через активацию миндалевидного тела</li>
+      </ul>
+      
+      <p><strong>Фаза 2: Создание "внушаемого состояния" (30-60 секунд)</strong></p>
+      <ul>
+        <li>Кортизол и адреналин достигают пиковых значений</li>
+        <li>Префронтальная кора (отвечающая за критическое мышление) угнетается</li>
+        <li>Активность миндалины (эмоциональные реакции) усиливается</li>
+        <li>Критическое мышление снижается на 60-80%</li>
+      </ul>
+      
+      <p><strong>Фаза 3: Внедрение через «Эффекта Фрея» (60+ секунд)</strong></p>
+      <ul>
+        <li>Микроволновая модуляция создает акустические волны непосредственно в нервной ткани</li>
+        <li>Обходит обычные слуховые фильтры и критическую оценку</li>
+        <li>Создает ощущение "собственных мыслей" или "внутреннего голоса"</li>
+        <li>Эффективность внушения увеличивается на 300-500%</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- КОМБИНИРОВАННЫЕ УГРОЗЫ -->
+  <div class="card">
+    <h2>🚨 Комбинированные угрозы и риски</h2>
+    <div class="protection-grid">
+      <div class="protection-card danger">
+        <h3>Психологическое подавление</h3>
+        <span class="threat-level threat-high">КРИТИЧЕСКИЙ РИСК</span>
+        <ul>
+          <li><b>Инфразвук:</b> тревога, страх, паника</li>
+          <li><b>Эффект Фрея:</b> голосовые команды</li>
+          <li><b>Синергия:</b> полная психологическая уязвимость</li>
+        </ul>
+      </div>
+      <div class="protection-card synergy">
+        <h3>Физиологическое воздействие</h3>
+        <span class="threat-level threat-high">КРИТИЧЕСКИЙ РИСК</span>
+        <ul>
+          <li><b>Инфразвук:</b> резонанс внутренних органов</li>
+          <li><b>Эффект Фрея:</b> нейронное перевозбуждение</li>
+          <li><b>Синергия:</b> системный физиологический коллапс</li>
+        </ul>
+      </div>
+      <div class="protection-card infrasound">
+        <h3>Когнитивный контроль</h3>
+        <span class="threat-level threat-high">ВЫСОКИЙ РИСК</span>
+        <ul>
+          <li><b>Инфразвук:</b> нарушение концентрации</li>
+          <li><b>Эффект Фрея:</b> внедрение мыслей</li>
+          <li><b>Синергия:</b> полный контроль принятия решений</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ИНФРАЗВУК: ДЕТАЛЬНОЕ ОПИСАНИЕ -->
+  <h2>📉 Инфразвуковое воздействие: механизмы и последствия</h2>
+  <div class="row">
+    <div class="col card">
+      <h3>Психологические эффекты</h3>
+      <div class="badge badge-infrasound">Частоты: 0.1-20 Гц</div>
+      <ul>
+        <li><strong>Тревога и паника:</strong> необъяснимое чувство страха</li>
+        <li><strong>Тоска и подавленность:</strong> ощущение безысходности</li>
+        <li><strong>Дереализация:</strong> искаженное восприятие реальности</li>
+        <li><strong>Нарушение сна:</strong> кошмары, бессонница</li>
+        <li><strong>Аналогия с паранормальным:</strong> ощущения, схожие с "призрачными" явлениями</li>
+      </ul>
+    </div>
+    <div class="col card">
+      <h3>Физиологические эффекты</h3>
+      <div class="badge badge-infrasound">Уровень: 110-150 дБ</div>
+      <ul>
+        <li><strong>ЦНС:</strong> головные боли, головокружение, тошнота</li>
+        <li><strong>Сердечно-сосудистая:</strong> аритмия, колебания давления</li>
+        <li><strong>Дыхательная:</strong> нарушение ритма дыхания</li>
+        <li><strong>Вестибулярный аппарат:</strong> потеря равновесия</li>
+        <li><strong>Зрение:</strong> нарушения аккомодации, нистагм</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- РЕЗОНАНСНЫЕ ЧАСТОТЫ ОРГАНИЗМА -->
+  <div class="card">
+    <h3>Резонансные частоты организма человека</h3>
+    <table class="frequency-table">
+      <tr>
+        <th>Орган/Система</th>
+        <th>Резонансная частота</th>
+        <th>Эффект воздействия</th>
+        <th>Уровень угрозы</th>
+      </tr>
+      <tr>
+        <td class="resonance-cell resonance-1">Головной мозг (альфа-ритм)</td>
+        <td>7-13 Гц</td>
+        <td>Нарушение мышления, внушаемость</td>
+        <td><span class="threat-level threat-high">ВЫСОКАЯ</span></td>
+      </tr>
+      <tr>
+        <td class="resonance-cell resonance-1">Сердце</td>
+        <td>4-6 Гц</td>
+        <td>Аритмия, тахикардия, боль</td>
+        <td><span class="threat-level threat-high">ВЫСОКАЯ</span></td>
+      </tr>
+      <tr>
+        <td class="resonance-cell resonance-2">Желудок</td>
+        <td>2-4 Гц</td>
+        <td>Тошнота, спазмы, дискомфорт</td>
+        <td><span class="threat-level threat-medium">СРЕДНЯЯ</span></td>
+      </tr>
+      <tr>
+        <td class="resonance-cell resonance-2">Почки</td>
+        <td>6-8 Гц</td>
+        <td>Болевые ощущения, нарушения</td>
+        <td><span class="threat-level threat-medium">СРЕДНЯЯ</span></td>
+      </tr>
+      <tr>
+        <td class="resonance-cell resonance-3">Глаза</td>
+        <td>20-90 Гц</td>
+        <td>Нарушение зрения, усталость</td>
+        <td><span class="threat-level threat-medium">СРЕДНЯЯ</span></td>
+      </tr>
+      <tr>
+        <td class="resonance-cell resonance-4">Вестибулярный аппарат</td>
+        <td>0.5-13 Гц</td>
+        <td>Головокружение, тошнота</td>
+        <td><span class="threat-level threat-high">ВЫСОКАЯ</span></td>
+      </tr>
+      <tr>
+        <td class="resonance-cell resonance-5">Костная система</td>
+        <td>5-10 Гц</td>
+        <td>Вибрация, дискомфорт</td>
+        <td><span class="threat-level threat-low">НИЗКАЯ</span></td>
+      </tr>
+    </table>
+    <div class="muted">При совпадении частот инфразвука с резонансными частотами органов возникают интенсивные вибрации, вызывающие болевые ощущения и функциональные нарушения.</div>
+  </div>
+
+  <!-- ДЕТАЛЬНЫЙ МЕХАНИЗМ СИНЕРГЕТИЧЕСКОГО КОНТРОЛЯ -->
+  <div class="card">
+    <h2>🧠 Детальный механизм синергетического контроля сознания</h2>
+    
+    <h3>Полный контроль сознания: Механизм достижения</h3>
+    
+    <h4>Нейробиологическая основа:</h4>
+    <div class="row">
+      <div class="col">
+        <h5>Дисфункция префронтальной коры:</h5>
+        <ul>
+          <li><b>Инфразвук</b> нарушает работу dorsolateral prefrontal cortex (dlPFC)</li>
+          <li>dlPFC отвечает за: планирование, критическое мышление, подавление импульсов</li>
+          <li>Результат: неспособность оценивать рациональность команд</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h5>Гиперактивность лимбической системы:</h5>
+        <ul>
+          <li>Миндалевидное тело: усиление страха и тревоги</li>
+          <li>Гиппокамп: нарушение формирования новых воспоминаний</li>
+          <li>Поясная извилина: усиление эмоциональных реакций</li>
+        </ul>
+      </div>
+    </div>
+    
+    <h4>Психологический механизм:</h4>
+    <div class="row">
+      <div class="col">
+        <h5>Создание когнитивного диссонанса:</h5>
+        <ol>
+          <li>Инфразвук вызывает физиологический стресс</li>
+          <li>Мозг ищет объяснение дискомфорту</li>
+          <li>«Эффект Фрея» предоставляет "объяснение" и "решение"</li>
+          <li>Возникает зависимость от источника "облегчения"</li>
+        </ol>
+      </div>
+      <div class="col">
+        <h5>Формирование условного рефлекса:</h5>
+        <pre><b>Дискомфорт (инфразвук) → Команда (Эффект Фрея)<br>→ Временное облегчение → 
+→ Закрепление связи "послушание = облегчение"</b></pre>
+      </div>
+    </div>
+    
+    <h3>Когнитивный контроль: Детальный механизм</h3>
+    
+    <h4>Нарушение концентрации (инфразвук):</h4>
+    <div class="row">
+      <div class="col">
+        <h5>Нейрофизиологические эффекты:</h5>
+        <ul>
+          <li>Десинхронизация тета- и альфа-ритмов ЭЭГ</li>
+          <li>Нарушение работы ретикулярной формации (внимание)</li>
+          <li>Ухудшение нейронной связи между полушариями</li>
+          <li>Снижение скорости обработки информации на 40-60%</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h5>Когнитивные проявления:</h5>
+        <ul>
+          <li>Ухудшение рабочей памяти</li>
+          <li>Нарушение избирательного внимания</li>
+          <li>Снижение исполнительных функций</li>
+          <li>Ухудшение многозадачности</li>
+        </ul>
+      </div>
+    </div>
+    
+    <h4>Внедрение мыслей через «Эффекта Фрея»:</h4>
+    <div class="row">
+      <div class="col">
+        <h5>Нейронные механизмы:</h5>
+        <ul>
+          <li>Активация зоны Вернике без участия слуховой системы</li>
+          <li>Создание ложных нейронных паттернов, идентичных реальным мыслям</li>
+          <li>Обход когнитивных фильтров префронтальной коры</li>
+          <li>Формирование "имплантированных" нейронных связей</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h5>Психологические аспекты:</h5>
+        <ul>
+          <li>Восприятие внушенных мыслей как собственных</li>
+          <li>Отсутствие критической оценки источника</li>
+          <li>Эмоциональное окрашивание внушенного содержания</li>
+          <li>Формирование ложных воспоминаний</li>
+        </ul>
+      </div>
+    </div>
+    
+    <h4>Синергия: Полный контроль принятия решений</h4>
+    <div class="countermeasure">
+      <h5>Нейробиологическая основа:</h5>
+      <ul>
+        <li><b>Инфразвук:</b> угнетение dorsolateral prefrontal cortex (рациональное мышление)</li>
+        <li><b>«Эффект Фрея»:</b> активация ventromedial prefrontal cortex (эмоциональные решения)</li>
+        <li><b>Результат:</b> решения принимаются на эмоциональной, а не рациональной основе</li>
+      </ul>
+      
+      <h5>Механизм принятия решений под воздействием:</h5>
+
+      <center>
+        <pre>
+     <b>Входная информация → Эмоциональная оценка (активная) → 
+        → Рациональная оценка (подавлена) → Принятие решения</b>
+        </pre>
+      </center>
+      
+      <h5>Конкретные примеры контроля:</h5>
+      <div class="row">
+        <div class="col">
+          <strong>Финансовые решения:</strong>
+          <ul>
+            <li><b>Инфразвук</b> создает чувство срочности и тревоги</li>
+            <li><b>«Эффект Фрея»</b> внушает "необходимость" определенных финансовых действий</li>
+            <li>Результат: необдуманные финансовые операции</li>
+          </ul>
+        </div>
+        <div class="col">
+          <strong>Социальные взаимодействия:</strong>
+          <ul>
+            <li><b>Инфразвук</b> вызывает социальную тревожность</li>
+            <li><b>«Эффект Фрея»</b> предоставляет "решение" в виде определенного поведения</li>
+            <li>Результат: манипулируемое социальное поведение</li>
+          </ul>
+        </div>
+        <div class="col">
+          <strong>Профессиональные решения:</strong>
+          <ul>
+            <li><b>Инфразвук</b> нарушает аналитические способности</li>
+            <li><b>«Эффект Фрея»</b> направляет к "нужным" выводам</li>
+            <li>Результат: принятие выгодных манипулятору решений</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- СИСТЕМА ОБНАРУЖЕНИЯ КОМБИНИРОВАННЫХ ВОЗДЕЙСТВИЙ -->
+  <h2>🔍 Система обнаружения комбинированных воздействий</h2>
+  <div class="row">
+    <div class="col card">
+      <h3>RF-мониторинг (Фрея)</h3>
+      <div class="badge badge-frey">Микроволны 300 МГц - 6 ГГц</div>
+      <ul>
+        <li><strong>Широкополосные детекторы:</strong> непрерывный мониторинг</li>
+        <li><strong>Анализаторы спектра:</strong> обнаружение аномальных модуляций</li>
+        <li><strong>Направленные антенны:</strong> триангуляция источника</li>
+        <li><strong>Детекторы модуляции:</strong> выявление речевых паттернов</li>
+      </ul>
+    </div>
+    <div class="col card">
+      <h3>Инфразвуковой мониторинг</h3>
+      <div class="badge badge-infrasound">Низкие частоты 0.1-20 Гц</div>
+      <ul>
+        <li><strong>Барометрические датчики:</strong> высокочувствительные сенсоры давления</li>
+        <li><strong>Сейсмические датчики:</strong> обнаружение низкочастотных вибраций</li>
+        <li><strong>Инфразвуковые микрофоны:</strong> специализированные акустические системы</li>
+        <li><strong>Спектральные анализаторы:</strong> идентификация резонансных частот</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="row">
+    <div class="col card">
+      <h3>Биометрический мониторинг</h3>
+      <ul>
+        <li><strong>ЭЭГ-браслеты:</strong> обнаружение аномальной мозговой активности</li>
+        <li><strong>Кардиомониторы:</strong> фиксация аритмий, вызванных резонансом</li>
+        <li><strong>Кожно-гальваническая реакция:</strong> стрессовые состояния</li>
+        <li><strong>Тремор-датчики:</strong> обнаружение низкочастотной вибрации тела</li>
+      </ul>
+    </div>
+    <div class="col card">
+      <h3>Поведенческий анализ</h3>
+      <ul>
+        <li><strong>Видеоаналитика:</strong> обнаружение необычных двигательных паттернов</li>
+        <li><strong>Анализ речи:</strong> изменения тембра, ритма, содержания</li>
+        <li><strong>Когнитивные тесты:</strong> отслеживание изменений мышления</li>
+        <li><strong>Психометрические опросники:</strong> выявление изменений эмоционального состояния</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ФИЗИЧЕСКАЯ ЗАЩИТА ОТ КОМБИНИРОВАННОГО ВОЗДЕЙСТВИЯ -->
+  <h2>🏗️ Физическая защита от комбинированного воздействия</h2>
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <h3>Экранирование от «Эффекта Фрея»</h3>
+        <ul>
+          <li><strong>Сетка Фарадея:</strong> медная/алюминиевая сетка с ячейкой ≤ 3 мм</li>
+          <li><strong>Экранирующая краска:</strong> проводящие покрытия для стен</li>
+          <li><strong>Специальные стекла:</strong> прозрачные проводящие покрытия (ITO)</li>
+          <li><strong>Экранирующие шторы:</strong> металлизированный текстиль</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Защита от инфразвука</h3>
+        <ul>
+          <li><strong>Массивные конструкции:</strong> толстые стены из бетона, кирпича</li>
+          <li><strong>Виброизоляция:</strong> пружинные системы, демпфирующие материалы</li>
+          <li><strong>Герметизация:</strong> устранение щелей, воздушных каналов</li>
+          <li><strong>Противомассовые конструкции:</strong> рассеивание энергии инфразвука</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="countermeasure">
+      <h4>Комбинированная защита:</h4>
+      <p>Для защиты от синергетического воздействия необходимо комбинировать RF-экранирование с инфразвуковой изоляцией. Рекомендуется создание многослойных конструкций: внутренний слой - проводящий материал (медная сетка), внешний слой - массивный вибропоглощающий материал (бетон с демпфирующими добавками).</p>
+    </div>
+  </div>
+
+  <!-- АКТИВНЫЕ СИСТЕМЫ ПРОТИВОДЕЙСТВИЯ -->
+  <h2>⚡ Активные системы противодействия</h2>
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <h3>Подавление RF-сигнала «Эффекта Фрея»</h3>
+        <ul>
+          <li><strong>Генераторы шума:</strong> создание широкополосных помех</li>
+          <li><strong>Узкополосные глушилки:</strong> целевое подавление конкретных частот</li>
+          <li><strong>Адаптивные системы:</strong> автоматическое определение и подавление угроз</li>
+          <li><strong>Фазовое подавление:</strong> генерация противофазного сигнала</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Нейтрализация инфразвука</h3>
+        <ul>
+          <li><strong>Активная антивибрация:</strong> генерация противофазных низкочастотных волн</li>
+          <li><strong>Резонансные демпферы:</strong> поглощение энергии на критических частотах</li>
+          <li><strong>Акустические экраны:</strong> создание зон звуковой тени</li>
+          <li><strong>Виброизолирующие платформы:</strong> механическое развязывание от источника</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="countermeasure" style="background:#fff8e1;">
+      <h4>⚠️ Внимание:</h4>
+      <p>
+        Использование активных систем подавления (глушилок) может регулироваться местным законодательством. 
+        Перед применением убедитесь в правомерности их использования.
+      </p>
+    </div>
+  </div>
+
+  <!-- ИНДИВИДУАЛЬНЫЕ СРЕДСТВА ЗАЩИТЫ -->
+  <h2>👤 Индивидуальные средства защиты</h2>
+  <div class="protection-grid">
+    <div class="protection-card frey">
+      <h3>Защита от «Эффекта Фрея»</h3>
+      <ul>
+        <li>Экранирующие головные уборы (шапочки Фарадея)</li>
+        <li>Одежда с серебряными проводящими нитями</li>
+        <li>Персональные RF-детекторы и глушители</li>
+        <li>Экранирующие наушники/вкладыши</li>
+      </ul>
+    </div>
+    <div class="protection-card infrasound">
+      <h3>Защита от инфразвука</h3>
+      <ul>
+        <li>Виброизолирующая обувь с демпфирующими стельками</li>
+        <li>Специальные костюмы с вибропоглощающими вставками</li>
+        <li>Индивидуальные инфразвуковые детекторы</li>
+        <li>Активные наушники с шумоподавлением (низкие частоты)</li>
+      </ul>
+    </div>
+    <div class="protection-card synergy">
+      <h3>Комбинированная защита</h3>
+      <ul>
+        <li>Умные браслеты с комплексным мониторингом</li>
+        <li>Мобильные приложения с алгоритмами обнаружения</li>
+        <li>Персональные экранированные капсулы для сна</li>
+        <li>Портативные системы активного противодействия</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ПСИХОЛОГИЧЕСКАЯ УСТОЙЧИВОСТЬ -->
+  <h2>🧠 Психологическая устойчивость и подготовка</h2>
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <h3>Распознавание воздействия</h3>
+        <ul>
+          <li><strong>Обучение идентификации:</strong> как отличить естественные состояния от индуцированных</li>
+          <li><strong>Симптоматика «Эффекта Фрея»:</strong> "голоса в голове", необъяснимые слуховые ощущения</li>
+          <li><strong>Симптоматика инфразвука:</strong> беспричинная тревога, физический дискомфорт</li>
+          <li><strong>Синергетические признаки:</strong> сочетание слуховых и физиологических симптомов</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Противодействие внушению</h3>
+        <ul>
+          <li><strong>Критическое мышление:</strong> развитие навыков анализа информации</li>
+          <li><strong>Медитативные практики:</strong> усиление контроля над сознанием</li>
+          <li><strong>Когнитивные техники:</strong> методы блокировки нежелательных мыслей</li>
+          <li><strong>Психологический иммунитет:</strong> формирование устойчивости к внушению</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ЗАЩИТНЫЕ МЕХАНИЗМЫ И ПРОТИВОДЕЙСТВИЕ -->
+  <div class="card">
+    <h2>🛡️ Защитные механизмы и противодействие</h2>
+    <div class="row">
+      <div class="col">
+        <h3>Нейропластичность и резистентность</h3>
+        <ul>
+          <li><strong>Тренировка критического мышления:</strong> усиливает префронтальную кору</li>
+          <li><strong>Медитативные практики:</strong> повышают осознанность и снижают внушаемость</li>
+          <li><strong>Когнитивная подготовка:</strong> создает "иммунитет" к манипуляциям</li>
+          <li><strong>Нейробиоуправление:</strong> обучение контролю над собственными мозговыми ритмами</li>
+        </ul>
+      </div>
+      <div class="col">
+        <h3>Техническая защита</h3>
+        <ul>
+          <li><strong>RF-экранирование:</strong> блокирует «Эффект Фрея»</li>
+          <li><strong>Виброизоляция и активное подавление:</strong> нейтрализуют инфразвук</li>
+          <li><strong>Биологический мониторинг:</strong> выявляет ранние признаки воздействия</li>
+          <li><strong>Автоматические системы оповещения:</strong> предупреждают о начале воздействия</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ПРОТОКОЛЫ ДЕЙСТВИЙ -->
+  <div class="card" style="background: #e8f5e9; border-left: 4px solid var(--safe);">
+    <h2>✅ Протоколы действий при обнаружении воздействия</h2>
+    <ol>
+      <li><strong>Немедленная эвакуация</strong> из зоны воздействия в экранированное помещение</li>
+      <li><strong>Применение индивидуальных средств защиты</strong> (экранирующий головной убор, виброзащита)</li>
+      <li><strong>Активация систем мониторинга</strong> и документирование параметров воздействия</li>
+      <li><strong>Оповещение службы безопасности</strong> и правоохранительных органов</li>
+      <li><strong>Медицинское обследование</strong> для оценки состояния и получения доказательств</li>
+      <li><strong>Психологическая помощь</strong> для нейтрализации последствий воздействия</li>
+      <li><strong>Юридическое документирование</strong> инцидента для последующих действий</li>
+    </ol>
+  </div>
+
+  <!-- ЗАКЛЮЧЕНИЕ -->
+  <div class="card" style="text-align: center; background: #fff3e0;">
+    <h3>⚠️ Важное предупреждение</h3>
+    <p>Комбинированное воздействие <b>«Эффекта Фрея» и инфразвука</b> представляет чрезвычайно серьезную угрозу для психического и физического здоровья. </p>
+    <p>Данный материал предназначен для информационных целей и защиты от потенциальных угроз. Если вы подозреваете, что стали жертвой нежелательного воздействия, немедленно обратитесь к специалистам и в правоохранительные органы.</p>
+  </div>
+
+  <p class="muted" style="text-align: center; margin-top: 40px;">
+    <b>© НКО "Волна" | Обновлено: 2025</b>
+  </p>
+</div>
+
+<script>
+// Функции для модальных окон
+function openModal(modalId) {
+  document.getElementById(modalId).style.display = 'block';
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).style.display = 'none';
+}
+
+// Закрытие модального окна при клике вне его
+window.onclick = function(event) {
+  if (event.target.classList.contains('modal')) {
+    event.target.style.display = 'none';
+  }
+}
+
+// Интерактивные элементы для демонстрации резонансных частот
+document.addEventListener('DOMContentLoaded', function() {
+  // Анимация для строк таблицы резонансных частот
+  const resonanceCells = document.querySelectorAll('.resonance-cell');
+  resonanceCells.forEach(cell => {
+    cell.addEventListener('mouseenter', function() {
+      this.style.transform = 'scale(1.02)';
+      this.style.transition = 'transform 0.2s';
+    });
+    
+    cell.addEventListener('mouseleave', function() {
+      this.style.transform = 'scale(1)';
+    });
+  });
+  
+  // Интерактивность для карточек защиты
+  const protectionCards = document.querySelectorAll('.protection-card');
+  protectionCards.forEach(card => {
+    card.addEventListener('click', function() {
+      this.style.transform = 'translateY(-5px)';
+      setTimeout(() => {
+        this.style.transform = 'translateY(0)';
+      }, 200);
+    });
+  });
+  
+  // Динамическое обновление уровня угрозы (для демонстрации)
+  const threatLevels = document.querySelectorAll('.threat-level');
+  setInterval(() => {
+    threatLevels.forEach(level => {
+      const originalText = level.textContent;
+      level.style.opacity = '0.7';
+      setTimeout(() => {
+        level.style.opacity = '1';
+      }, 500);
+    });
+  }, 3000);
+});
+</script>
+</body>
+</html>
