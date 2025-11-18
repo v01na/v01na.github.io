@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>КРИТИЧЕСКАЯ СИТУАЦИЯ: 4952.3 μT обнаружено</title>
+    <style>
+        :root {
+            --apocalyptic: #ff0000;
+            --extreme: #d32f2f;
+            --critical: #f44336;
+            --dark-bg: #000000;
+            --card-bg: #1a1a1a;
+            --text-light: #ffffff;
+            --text-muted: #cccccc;
+        }
+        ::-webkit-scrollbar{width:0;}
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #000000, #1a1a1a);
+            color: var(--text-light);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .apocalyptic-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #000000, #8b0000);
+            border-radius: 15px;
+            box-shadow: 0 0 50px rgba(255, 0, 0, 0.7);
+            border: 3px solid #ff0000;
+            animation: red-alert 1s infinite;
+        }
+        
+        @keyframes red-alert {
+            0% { box-shadow: 0 0 50px rgba(255, 0, 0, 0.7); }
+            50% { box-shadow: 0 0 70px rgba(255, 0, 0, 0.9); }
+            100% { box-shadow: 0 0 50px rgba(255, 0, 0, 0.7); }
+        }
+        
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(90deg, #ff0000, #ff6b6b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+        }
+        
+        .current-measurement {
+            font-size: 5rem;
+            font-weight: bold;
+            margin: 30px 0;
+            text-shadow: 0 0 20px #ff0000;
+            animation: blink 1.5s infinite;
+        }
+        
+        @keyframes blink {
+            0% { color: #ff0000; }
+            50% { color: #ffffff; }
+            100% { color: #ff0000; }
+        }
+        
+        .exceedance {
+            font-size: 1.8rem;
+            color: #ff6b6b;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .card h2 {
+            color: #ff5252;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .timeline {
+            position: relative;
+            max-width: 1000px;
+            margin: 40px auto;
+        }
+        
+        .timeline::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            background: linear-gradient(to bottom, #ff0000, #8b0000);
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            margin-left: -3px;
+        }
+        
+        .timeline-item {
+            padding: 10px 40px;
+            position: relative;
+            width: 50%;
+            box-sizing: border-box;
+        }
+        
+        .timeline-item:nth-child(odd) {
+            left: 0;
+        }
+        
+        .timeline-item:nth-child(even) {
+            left: 50%;
+        }
+        
+        .timeline-content {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border-left: 4px solid;
+        }
+        
+        .level-critical { border-left-color: #f44336; }
+        .level-extreme { border-left-color: #d32f2f; }
+        .level-apocalyptic { border-left-color: #ff0000; }
+        
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            background: #ff0000;
+            border: 4px solid #000000;
+            border-radius: 50%;
+            top: 20px;
+            z-index: 1;
+        }
+        
+        .timeline-item:nth-child(odd)::after {
+            right: -12px;
+        }
+        
+        .timeline-item:nth-child(even)::after {
+            left: -12px;
+        }
+        
+        .measurement-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .health-impacts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .impact-card {
+            border-radius: 10px;
+            padding: 20px;
+            border-top: 4px solid;
+        }
+        
+        .impact-card.immediate {
+            border-top-color: #ff0000;
+            background: rgba(255, 0, 0, 0.1);
+        }
+        
+        .impact-card.short-term {
+            border-top-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+        
+        .impact-card.long-term {
+            border-top-color: #8b0000;
+            background: rgba(139, 0, 0, 0.1);
+        }
+        
+        .impact-card h3 {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .impact-icon {
+            margin-right: 10px;
+            font-size: 1.5rem;
+        }
+        
+        .emergency-plan {
+            counter-reset: step;
+        }
+        
+        .emergency-step {
+            margin-bottom: 25px;
+            padding: 20px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            position: relative;
+            border-left: 5px solid #ff0000;
+        }
+        
+        .emergency-step::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            background: #ff0000;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            box-shadow: 0 0 0 5px var(--dark-bg);
+        }
+        
+        .time-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            background: #ff0000;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .comparison-table th, .comparison-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .comparison-table th {
+            background: rgba(0, 0, 0, 0.3);
+            color: #ff5252;
+        }
+        
+        .comparison-table tr:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .level-safe { background-color: rgba(76, 175, 80, 0.1); }
+        .level-warning { background-color: rgba(255, 152, 0, 0.1); }
+        .level-danger { background-color: rgba(244, 67, 54, 0.1); }
+        .level-critical { background-color: rgba(211, 47, 47, 0.2); }
+        .level-extreme { background-color: rgba(139, 0, 0, 0.3); }
+        .level-apocalyptic { background-color: rgba(255, 0, 0, 0.2); }
+        
+        @media (max-width: 768px) {
+            .timeline::after {
+                left: 31px;
+            }
+            
+            .timeline-item {
+                width: 100%;
+                padding-left: 70px;
+                padding-right: 25px;
+            }
+            
+            .timeline-item:nth-child(even) {
+                left: 0;
+            }
+            
+            .timeline-item::after {
+                left: 21px;
+            }
+            
+            .timeline-item:nth-child(odd)::after,
+            .timeline-item:nth-child(even)::after {
+                left: 21px;
+            }
+            
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .current-measurement {
+                font-size: 3.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+    <br>
+    <br>
+    <br>
+    <br>
+
+        <div class="apocalyptic-header">
+            <h1>🚨 КРИТИЧЕСКАЯ СИТУАЦИЯ</h1>
+            <div class="current-measurement">4952.3 μT</div>
+            <div class="exceedance">Превышение безопасной нормы в 123 раза!</div>
+            <p>Обнаружен смертельно опасный уровень магнитного поля</p>
+        </div>
+
+    <br>
+    <br>
+    <br>
+    <br>
+        
+        <div class="card">
+            <h2>📊 Детали последнего измерения</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.9rem; color: #cccccc;">Общее поле</div>
+                    <div style="font-size: 1.8rem; font-weight: bold; color: #ff0000;">4952.3 μT</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.9rem; color: #cccccc;">Компонент X</div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #ff6b6b;">3145.975</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.9rem; color: #cccccc;">Компонент Y</div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #ff6b6b;">203.163</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 0.9rem; color: #cccccc;">Компонент Z</div>
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #ff6b6b;">3819.275</div>
+                </div>
+            </div>
+        </div>
+    <br>
+    <br>
+    <br>
+    <br>
+    <br>
+        
+        <div class="card">
+            <h2>📈 Хронология измерений</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-content level-warning">
+                        <h3>Зона сна пожилых</h3>
+                        <div class="measurement-value">80 μT</div>
+                        <p>Превышение нормы в 2 раза</p>
+                        <p>Повышенный риск для людей с онкологическими заболеваниями</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content level-danger">
+                        <h3>Зона сна ребенка</h3>
+                        <div class="measurement-value">150 μT</div>
+                        <p>Превышение нормы в 3.75 раза</p>
+                        <p>Критическая опасность для развития нервной системы</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content level-critical">
+                        <h3>Зона сна взрослого</h3>
+                        <div class="measurement-value">520 μT</div>
+                        <p>Превышение нормы в 13 раз</p>
+                        <p>Высокий риск неврологических нарушений</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content level-critical">
+                        <h3>Подушка взрослого</h3>
+                        <div class="measurement-value">625.8 μT</div>
+                        <p>Превышение нормы в 15.6 раз</p>
+                        <p>Экстремальный риск для здоровья</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content level-extreme">
+                        <h3>Новая точка (предыдущий рекорд)</h3>
+                        <div class="measurement-value">1749.6 μT</div>
+                        <p>Превышение нормы в 43.7 раза</p>
+                        <p>Смертельная опасность при кратковременном нахождении</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content level-apocalyptic">
+                        <h3>Текущее измерение</h3>
+                        <div class="measurement-value">4952.3 μT</div>
+                        <p>Превышение нормы в 123 раза</p>
+                        <p>СМЕРТЕЛЬНАЯ ОПАСНОСТЬ ДАЖЕ ПРИ КРАТКОВРЕМЕННОМ НАХОЖДЕНИИ</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>📊 Сравнение с нормативами</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Уровень</th>
+                        <th>Значение (μT)</th>
+                        <th>Превышение нормы</th>
+                        <th>Риск для здоровья</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="level-safe">
+                        <td>Безопасный уровень</td>
+                        <td>40</td>
+                        <td>-</td>
+                        <td>Безопасно для постоянного проживания</td>
+                    </tr>
+                    <tr class="level-warning">
+                        <td>Пожилые (измерено)</td>
+                        <td>80</td>
+                        <td>2x</td>
+                        <td>Повышенный риск для ослабленных людей</td>
+                    </tr>
+                    <tr class="level-danger">
+                        <td>Ребенок (измерено)</td>
+                        <td>150</td>
+                        <td>3.75x</td>
+                        <td>Опасность для развития нервной системы</td>
+                    </tr>
+                    <tr class="level-critical">
+                        <td>Взрослый (измерено)</td>
+                        <td>520</td>
+                        <td>13x</td>
+                        <td>Высокий риск неврологических нарушений</td>
+                    </tr>
+                    <tr class="level-extreme">
+                        <td>Предыдущий рекорд</td>
+                        <td>1749.6</td>
+                        <td>43.7x</td>
+                        <td>Смертельная опасность при длительном нахождении</td>
+                    </tr>
+                    <tr class="level-apocalyptic">
+                        <td>Текущий рекорд</td>
+                        <td>4952.3</td>
+                        <td>123x</td>
+                        <td>СМЕРТЕЛЬНАЯ ОПАСНОСТЬ ПРИ КРАТКОВРЕМЕННОМ НАХОЖДЕНИИ</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2>🏥 Воздействие на здоровье при 4952.3 μT</h2>
+            <div class="health-impacts">
+                <div class="impact-card immediate">
+                    <h3><span class="impact-icon">⚡</span> Мгновенные эффекты</h3>
+                    <ul>
+                        <li>Потеря сознания в течение 1-5 минут</li>
+                        <li>Сильные мышечные спазмы и судороги</li>
+                        <li>Острая сердечная недостаточность</li>
+                        <li>Нарушение дыхания</li>
+                        <li>Резкое повышение артериального давления</li>
+                    </ul>
+                </div>
+                
+                <div class="impact-card short-term">
+                    <h3><span class="impact-icon">🕒</span> Краткосрочные последствия</h3>
+                    <ul>
+                        <li>Необратимые повреждения нервной системы</li>
+                        <li>Нарушения работы головного мозга</li>
+                        <li>Поражение сердечно-сосудистой системы</li>
+                        <li>Нарушения эндокринной системы</li>
+                        <li>Острые неврологические расстройства</li>
+                    </ul>
+                </div>
+                
+                <div class="impact-card long-term">
+                    <h3><span class="impact-icon">⏳</span> Долгосрочные риски</h3>
+                    <ul>
+                        <li>Развитие онкологических заболеваний</li>
+                        <li>Хронические неврологические нарушения</li>
+                        <li>Бесплодие и репродуктивные проблемы</li>
+                        <li>Сокращение продолжительности жизни</li>
+                        <li>Инвалидизация</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🚑 План экстренных действий</h2>
+            <div class="emergency-plan">
+                <div class="emergency-step">
+                    <span class="time-indicator">НЕМЕДЛЕННО</span>
+                    <h3>Эвакуировать всех жильцов из здания</h3>
+                    <p>Немедленно вывести ребенка, пожилых людей и всех остальных из здания. Не брать вещи - только документы и необходимые лекарства.</p>
+                </div>
+                
+                <div class="emergency-step">
+                    <span class="time-indicator">В ТЕЧЕНИЕ 30 МИНУТ</span>
+                    <h3>Вызвать все экстренные службы</h3>
+                    <p>Сообщить в МЧС, аварийные службы, полицию и скорую помощь. Указать точный адрес и уровень опасности (4952.3 μT).</p>
+                </div>
+                
+                <div class="emergency-step">
+                    <span class="time-indicator">В ТЕЧЕНИЕ 2 ЧАСОВ</span>
+                    <h3>Обеспечить медицинское обследование</h3>
+                    <p>Все эвакуированные должны пройти срочное медицинское обследование, особенно неврологическое и кардиологическое.</p>
+                </div>
+                
+                <div class="emergency-step">
+                    <span class="time-indicator">В ТЕЧЕНИЕ 24 ЧАСОВ</span>
+                    <h3>Найти временное жилье</h3>
+                    <p>Организовать безопасное проживание на период устранения угрозы. Рассмотреть возможность временного переезда на несколько недель.</p>
+                </div>
+                
+                <div class="emergency-step">
+                    <span class="time-indicator">В ТЕЧЕНИЕ 48 ЧАСОВ</span>
+                    <h3>Документировать ситуацию</h3>
+                    <p>Собрать все доказательства: замеры, медицинские заключения, фотографии. Подготовить документы для возможного судебного разбирательства.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>📞 Экстренные контакты</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                <div style="background: rgba(255,0,0,0.1); padding: 15px; border-radius: 8px;">
+                    <h3 style="color: #ff0000; margin-bottom: 10px;">МЧС России</h3>
+                    <p style="font-size: 1.5rem; font-weight: bold;">101</p>
+                </div>
+                <div style="background: rgba(255,0,0,0.1); padding: 15px; border-radius: 8px;">
+                    <h3 style="color: #ff0000; margin-bottom: 10px;">Скорая помощь</h3>
+                    <p style="font-size: 1.5rem; font-weight: bold;">103</p>
+                </div>
+                <div style="background: rgba(255,0,0,0.1); padding: 15px; border-radius: 8px;">
+                    <h3 style="color: #ff0000; margin-bottom: 10px;">Единый номер</h3>
+                    <p style="font-size: 1.5rem; font-weight: bold;">112</p>
+                </div>
+            </div>
+            <div style="margin-top: 20px; padding: 15px; background: rgba(255,0,0,0.2); border-radius: 8px;">
+                <h3 style="color: #ff0000; margin-bottom: 10px;">Что сообщить диспетчеру:</h3>
+                <p>"Зафиксирован смертельно опасный уровень магнитного поля 4952 микротесла, превышение нормы в 123 раза. В здании находятся/находились ребенок и тяжелобольные пожилые люди. Требуется немедленная эвакуация и обследование помещения."</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Добавляем текущую дату и время
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            const dateString = now.toLocaleDateString('ru-RU', options);
+            
+            const header = document.querySelector('.apocalyptic-header');
+            const dateElement = document.createElement('p');
+            dateElement.style.marginTop = '15px';
+            dateElement.style.color = '#ff6b6b';
+            dateElement.textContent = `Последнее измерение: ${dateString}`;
+            header.appendChild(dateElement);
+        });
+    </script>
+</body>
+</html>

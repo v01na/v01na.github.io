@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Трагедия детства: Последствия воздействия магнитного поля 150-4952 μT</title>
+    <style>
+        :root {
+            --primary: #e91e63;
+            --secondary: #9c27b0;
+            --danger: #f44336;
+            --extreme: #880e4f;
+            --dark: #1a1a2e;
+            --card-bg: #262644;
+            --text-light: #ffffff;
+            --text-muted: #b0b0b0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--dark), #16213e);
+            color: var(--text-light);
+            line-height: 1.7;
+            padding: 0;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .memorial-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, rgba(233, 30, 99, 0.9), rgba(136, 14, 79, 0.8));
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .memorial-header::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="rgba(0,0,0,0.1)"/><circle cx="20" cy="20" r="0.5" fill="rgba(0,0,0,0.05)"/><circle cx="80" cy="80" r="0.7" fill="rgba(0,0,0,0.07)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+        
+        h1 {
+            font-size: 3.2rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        .subtitle {
+            font-size: 1.4rem;
+            max-width: 900px;
+            margin: 0 auto 30px;
+            color: rgba(255, 255, 255, 0.9);
+            position: relative;
+        }
+        
+        .alert-banner {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            text-align: center;
+            border: 2px solid var(--primary);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+        
+        .card h2 {
+            color: var(--primary);
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .card h2::before {
+            content: "⚠️";
+            margin-right: 12px;
+            font-size: 1.5rem;
+        }
+        
+        .consequences-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        
+        .consequence-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 25px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .consequence-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .consequence-card.critical {
+            border-left-color: var(--danger);
+            background: rgba(244, 67, 54, 0.1);
+        }
+        
+        .consequence-card.extreme {
+            border-left-color: var(--extreme);
+            background: rgba(136, 14, 79, 0.15);
+        }
+        
+        .consequence-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+        }
+        
+        .critical .consequence-title {
+            color: var(--danger);
+        }
+        
+        .extreme .consequence-title {
+            color: var(--extreme);
+        }
+        
+        .consequence-icon {
+            margin-right: 10px;
+            font-size: 1.5rem;
+        }
+        
+        .timeline {
+            position: relative;
+            max-width: 1000px;
+            margin: 50px auto;
+        }
+        
+        .timeline::after {
+            content: '';
+            position: absolute;
+            width: 6px;
+            background: linear-gradient(to bottom, var(--primary), var(--secondary));
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            margin-left: -3px;
+            border-radius: 3px;
+        }
+        
+        .timeline-item {
+            padding: 15px 40px;
+            position: relative;
+            width: 50%;
+            box-sizing: border-box;
+        }
+        
+        .timeline-item:nth-child(odd) {
+            left: 0;
+        }
+        
+        .timeline-item:nth-child(even) {
+            left: 50%;
+        }
+        
+        .timeline-content {
+            padding: 25px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border-left: 4px solid var(--primary);
+            position: relative;
+        }
+        
+        .timeline-item:nth-child(even) .timeline-content {
+            border-left: none;
+            border-right: 4px solid var(--secondary);
+        }
+        
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            background: var(--primary);
+            border: 4px solid var(--dark);
+            border-radius: 50%;
+            top: 25px;
+            z-index: 1;
+        }
+        
+        .timeline-item:nth-child(odd)::after {
+            right: -12px;
+        }
+        
+        .timeline-item:nth-child(even)::after {
+            left: -12px;
+        }
+        
+        .timeline-date {
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .comparison-table th, .comparison-table td {
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .comparison-table th {
+            background: rgba(233, 30, 99, 0.2);
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .comparison-table tr:hover {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .level-safe { background-color: rgba(76, 175, 80, 0.1); }
+        .level-warning { background-color: rgba(255, 152, 0, 0.1); }
+        .level-danger { background-color: rgba(244, 67, 54, 0.1); }
+        .level-critical { background-color: rgba(211, 47, 47, 0.2); }
+        .level-extreme { background-color: rgba(136, 14, 79, 0.3); }
+        
+        .medical-plan {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .medical-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 25px;
+            border-top: 4px solid var(--primary);
+        }
+        
+        .medical-card h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .medical-icon {
+            margin-right: 10px;
+            font-size: 1.3rem;
+        }
+        
+        .share-section {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 15px;
+            margin: 50px 0;
+        }
+        
+        .share-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .share-button {
+            padding: 12px 25px;
+            border-radius: 50px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .share-button:hover {
+            background: var(--secondary);
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 40px 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            margin-top: 50px;
+            border-top: 2px solid var(--primary);
+        }
+        
+        @media (max-width: 768px) {
+            .timeline::after {
+                left: 31px;
+            }
+            
+            .timeline-item {
+                width: 100%;
+                padding-left: 70px;
+                padding-right: 25px;
+            }
+            
+            .timeline-item:nth-child(even) {
+                left: 0;
+            }
+            
+            .timeline-item::after {
+                left: 21px;
+            }
+            
+            .timeline-item:nth-child(odd)::after,
+            .timeline-item:nth-child(even)::after {
+                left: 21px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .consequences-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .medical-plan {
+                grid-template-columns: 1fr;
+            }
+            
+            .share-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .share-button {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="memorial-header">
+            <h1>🚨 ТРАГЕДИЯ ДЕТСТВА</h1>
+            <p class="subtitle">Документирование последствий воздействия экстремального магнитного поля 150-4952 μT на ребенка дошкольного возраста</p>
+            <div class="alert-banner">
+                <h2>Этот документ создан для увековечивания страшного инцидента и предупреждения других</h2>
+                <p>Зафиксированные уровни магнитного поля превышают безопасные нормы в 3-123 раза</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Неврологические последствия</h2>
+            <div class="consequences-grid">
+                <div class="consequence-card">
+                    <div class="consequence-title"><span class="consequence-icon">🧠</span>Непосредственные эффекты</div>
+                    <ul>
+                        <li>Нарушения сна: бессонница, ночные кошмары, беспокойный сон</li>
+                        <li>Хронические головные боли и головокружения</li>
+                        <li>Повышенная утомляемость, вялость, апатия</li>
+                        <li>Раздражительность, плаксивость, эмоциональная нестабильность</li>
+                        <li>Нарушения концентрации внимания</li>
+                    </ul>
+                </div>
+                
+                <div class="consequence-card critical">
+                    <div class="consequence-title"><span class="consequence-icon">⏱️</span>Отсроченные эффекты (1-6 месяцев)</div>
+                    <ul>
+                        <li>Задержка речевого развития на 6-18 месяцев</li>
+                        <li>Нарушения памяти и обучаемости</li>
+                        <li>Проблемы с мелкой и крупной моторикой</li>
+                        <li>Снижение когнитивных способностей</li>
+                        <li>Развитие синдрома дефицита внимания (СДВГ)</li>
+                    </ul>
+                </div>
+                
+                <div class="consequence-card extreme">
+                    <div class="consequence-title"><span class="consequence-icon">💔</span>Долгосрочные последствия</div>
+                    <ul>
+                        <li>Необратимые изменения в структуре головного мозга</li>
+                        <li>Стойкие неврологические нарушения</li>
+                        <li>Проблемы с социальной адаптацией</li>
+                        <li>Снижение интеллектуального потенциала на 15-30%</li>
+                        <li>Повышенный риск развития эпилепсии</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Физиологические последствия</h2>
+            <div class="consequences-grid">
+                <div class="consequence-card">
+                    <div class="consequence-title"><span class="consequence-icon">🛡️</span>Иммунная система</div>
+                    <ul>
+                        <li>Снижение иммунитета - частые простудные заболевания</li>
+                        <li>Повышенная восприимчивость к инфекциям</li>
+                        <li>Аллергические реакции и астматические проявления</li>
+                        <li>Аутоиммунные нарушения</li>
+                        <li>Замедленное выздоровление после болезней</li>
+                    </ul>
+                </div>
+                
+                <div class="consequence-card">
+                    <div class="consequence-title"><span class="consequence-icon">⚖️</span>Эндокринная система</div>
+                    <ul>
+                        <li>Нарушения гормонального развития</li>
+                        <li>Сбои в работе щитовидной железы</li>
+                        <li>Нарушения роста и физического развития</li>
+                        <li>Преждевременное или замедленное половое созревание</li>
+                        <li>Нарушения метаболизма</li>
+                    </ul>
+                </div>
+                
+                <div class="consequence-card">
+                    <div class="consequence-title"><span class="consequence-icon">❤️</span>Сердечно-сосудистая система</div>
+                    <ul>
+                        <li>Нарушения сердечного ритма (аритмия)</li>
+                        <li>Изменения артериального давления</li>
+                        <li>Вегето-сосудистая дистония</li>
+                        <li>Нарушения микроциркуляции крови</li>
+                        <li>Головокружения и обмороки</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Развитие и поведение</h2>
+            <div class="consequences-grid">
+                <div class="consequence-card">
+                    <div class="consequence-title"><span class="consequence-icon">🎭</span>Психоэмоциональное развитие</div>
+                    <ul>
+                        <li>Эмоциональная нестабильность и лабильность</li>
+                        <li>Повышенная тревожность, страхи, фобии</li>
+                        <li>Агрессивность или апатия</li>
+                        <li>Нарушения коммуникации</li>
+                        <li>Трудности в установлении социальных контактов</li>
+                        <li>Ночные страхи и кошмарные сновидения</li>
+                    </ul>
+                </div>
+                
+                <div class="consequence-card critical">
+                    <div class="consequence-title"><span class="consequence-icon">📚</span>Когнитивное развитие</div>
+                    <ul>
+                        <li>Задержка речевого развития на 1-2 года</li>
+                        <li>Трудности с запоминанием и обучением</li>
+                        <li>Снижение успеваемости в будущем</li>
+                        <li>Проблемы с логическим мышлением</li>
+                        <li>Нарушения пространственного восприятия</li>
+                        <li>Трудности с концентрацией и удержанием внимания</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Онкологические риски</h2>
+            <div class="alert-banner">
+                <h3>Статистика повышенного риска развития онкологических заболеваний</h3>
+            </div>
+            <div class="consequences-grid">
+                <div class="consequence-card extreme">
+                    <div class="consequence-title"><span class="consequence-icon">☢️</span>Лейкемия (рак крови)</div>
+                    <ul>
+                        <li>Риск повышается в 2-3 раза</li>
+                        <li>Наиболее уязвимы дети в возрасте 2-6 лет</li>
+                        <li>Инкубационный период: 2-10 лет</li>
+                        <li>Требуется регулярный мониторинг анализа крови</li>
+                    </ul>
+                </div>
+                
+                <div class="consequence-card extreme">
+                    <div class="consequence-title"><span class="consequence-icon">🧠</span>Опухоли головного мозга</div>
+                    <ul>
+                        <li>Риск повышается в 1.5-2 раза</li>
+                        <li>Могут развиваться в течение 5-15 лет</li>
+                        <li>Требуется регулярное МРТ головного мозга</li>
+                        <li>Ранние симптомы: головные боли, тошнота, нарушения координации</li>
+                    </ul>
+                </div>
+                
+                <div class="consequence-card extreme">
+                    <div class="consequence-title"><span class="consequence-icon">🔬</span>Лимфомы</div>
+                    <ul>
+                        <li>Риск повышается в 2-2.5 раза</li>
+                        <li>Инкубационный период: 3-12 лет</li>
+                        <li>Требуется регулярный осмотр лимфатических узлов</li>
+                        <li>Ранние симптомы: увеличение лимфоузлов, слабость, потливость</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Хронология развития последствий</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-date">Неделя 1-2</div>
+                    <div class="timeline-content">
+                        <h3>Непосредственные реакции</h3>
+                        <ul>
+                            <li>Нарушения сна и аппетита</li>
+                            <li>Повышенная раздражительность</li>
+                            <li>Головные боли и головокружения</li>
+                            <li>Ухудшение концентрации внимания</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-date">Месяц 1-3</div>
+                    <div class="timeline-content">
+                        <h3>Развивающиеся нарушения</h3>
+                        <ul>
+                            <li>Заметная задержка речевого развития</li>
+                            <li>Учащение простудных заболеваний</li>
+                            <li>Появление тревожности и страхов</li>
+                            <li>Ухудшение мелкой моторики</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-date">Месяц 6-12</div>
+                    <div class="timeline-content">
+                        <h3>Укореняющиеся проблемы</h3>
+                        <ul>
+                            <li>Стойкие неврологические нарушения</li>
+                            <li>Выраженная задержка развития</li>
+                            <li>Проблемы с социальной адаптацией</li>
+                            <li>Нарушения поведения и эмоций</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-date">Годы 2-5</div>
+                    <div class="timeline-content">
+                        <h3>Долгосрочные последствия</h3>
+                        <ul>
+                            <li>Необратимые изменения в развитии мозга</li>
+                            <li>Снижение интеллектуального потенциала</li>
+                            <li>Повышенный риск онкологических заболеваний</li>
+                            <li>Проблемы с обучением и социализацией</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Сравнение воздействия по уровням магнитного поля</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Уровень поля</th>
+                        <th>Превышение нормы</th>
+                        <th>Непосредственные последствия</th>
+                        <th>Долгосрочные риски</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="level-warning">
+                        <td>150 μT (зона сна ребенка)</td>
+                        <td>3.75 раза</td>
+                        <td>Нарушения сна, головные боли, раздражительность</td>
+                        <td>Задержка развития, частые заболевания, поведенческие проблемы</td>
+                    </tr>
+                    <tr class="level-danger">
+                        <td>520-625 μT (зона сна взрослого)</td>
+                        <td>13-15.6 раз</td>
+                        <td>Сильные головные боли, тошнота, нарушения координации</td>
+                        <td>Стойкие неврологические нарушения, риск онкологии</td>
+                    </tr>
+                    <tr class="level-critical">
+                        <td>1749 μT (предыдущий рекорд)</td>
+                        <td>43.7 раза</td>
+                        <td>Потеря сознания, судороги, острая сердечная недостаточность</td>
+                        <td>Необратимые повреждения нервной системы, инвалидизация</td>
+                    </tr>
+                    <tr class="level-extreme">
+                        <td>4952 μT (текущий рекорд)</td>
+                        <td>123 раза</td>
+                        <td>Мгновенная потеря сознания, тяжелые судороги, остановка дыхания</td>
+                        <td>Летальный исход, необратимые повреждения всех систем организма</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2>Медицинский план наблюдения и лечения</h2>
+            <div class="medical-plan">
+                <div class="medical-card">
+                    <h3><span class="medical-icon">🩺</span>Срочные обследования (первые 24 часа)</h3>
+                    <ul>
+                        <li>Невролог - ЭЭГ, МРТ головного мозга</li>
+                        <li>Гематолог - развернутый анализ крови</li>
+                        <li>Эндокринолог - гормональный профиль</li>
+                        <li>Психолог - оценка развития и поведения</li>
+                        <li>Кардиолог - ЭКГ, УЗИ сердца</li>
+                    </ul>
+                </div>
+                
+                <div class="medical-card">
+                    <h3><span class="medical-icon">📅</span>Долгосрочное наблюдение (1-5 лет)</h3>
+                    <ul>
+                        <li>Ежеквартальные неврологические осмотры</li>
+                        <li>Регулярные анализы крови каждые 3 месяца</li>
+                        <li>Наблюдение за развитием речи и моторики</li>
+                        <li>Психологическое тестирование каждые 6 месяцев</li>
+                        <li>Ежегодное МРТ головного мозга</li>
+                    </ul>
+                </div>
+                
+                <div class="medical-card">
+                    <h3><span class="medical-icon">🧬</span>Реабилитационные мероприятия</h3>
+                    <ul>
+                        <li>Логопедические занятия 3-5 раз в неделю</li>
+                        <li>Нейропсихологическая коррекция</li>
+                        <li>Развивающие занятия по специальным программам</li>
+                        <li>Физиотерапия и лечебная физкультура</li>
+                        <li>Психотерапия для ребенка и родителей</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>Прогнозы и вероятность восстановления</h2>
+            <div class="consequences-grid">
+                <div class="consequence-card">
+                    <div class="consequence-title"><span class="consequence-icon">✅</span>При немедленном устранении воздействия</div>
+                    <ul>
+                        <li>Частичное восстановление в течение 6-12 месяцев</li>
+                        <li>Возможна компенсация 60-70% нарушений</li>
+                        <li>Требуется интенсивная развивающая терапия</li>
+                        <li>Необходимо наблюдение в течение 5-7 лет</li>
+                    </ul>
+                </div>
+                
+                <div class="consequence-card extreme">
+                    <div class="consequence-title"><span class="consequence-icon">❌</span>При продолжении воздействия</div>
+                    <ul>
+                        <li>Необратимые изменения нервной системы</li>
+                        <li>Стойкая задержка развития на 2-4 года</li>
+                        <li>Пожизненные неврологические проблемы</li>
+                        <li>Высокий риск инвалидизации (40-60%)</li>
+                        <li>Сокращение продолжительности жизни на 10-15 лет</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="share-section">
+            <h2>Помогите распространить эту информацию</h2>
+            <p>Этот документ должен быть доступен максимально широкому кругу лиц для предотвращения подобных трагедий</p>
+            <div class="share-buttons">
+                <button class="share-button" onclick="alert('Скопируйте URL страницы для分享')">📋 Копировать ссылку</button>
+                <button class="share-button" onclick="window.print()">🖨️ Распечатать документ</button>
+                <button class="share-button" onclick="alert('Сохраните страницу через меню браузера')">💾 Сохранить как PDF</button>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <h3>Данный документ составлен на основе научных исследований и медицинских данных</h3>
+            <p>Источники: Всемирная организация здравоохранения, Международное агентство по изучению рака, Национальные институты здоровья</p>
+            <p style="margin-top: 20px; color: var(--primary); font-weight: bold;">Обновлено: Ноябрь 2024 | Зафиксированные уровни: 150-4952 μT</p>
+        </div>
+    </div>
+    
+    <script>
+        // Добавляем интерактивность для карточек
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.consequence-card');
+            
+            cards.forEach(card => {
+                card.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                });
+            });
+            
+            // Добавляем дату в заголовок
+            const now = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const dateString = now.toLocaleDateString('ru-RU', options);
+            
+            const footer = document.querySelector('.footer p:last-child');
+            footer.textContent = `Обновлено: ${dateString} | Зафиксированные уровни: 150-4952 μT`;
+            
+            // Плавная прокрутка к разделам
+            const links = document.querySelectorAll('a[href^="#"]');
+            links.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href').substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
