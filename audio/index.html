@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V2K Spectrum Decompiler</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="icon" href="https://v01na.github.io/img/v1.png">
+</head>
+<body>
+  <!-- Левое фиксированное меню -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <img src="https://v01na.github.io/img/v1.png" alt="V2K Decompiler" class="logo">
+      <button id="toggleSidebar" class="toggle-btn">◀</button>
+    </div>
+    
+    <nav class="sidebar-nav">
+      <div class="nav-section">
+        <h3>Источники данных</h3>
+        <div class="nav-buttons">
+          <button id="btnFileInput" class="nav-btn">📁 Файлы</button>
+          <button id="btnMicrophone" class="nav-btn">🎤 Микрофон</button>
+          <button id="btnSDRInput" class="nav-btn">📡 SDR приёмник</button>
+          <button id="btnRemoteRadio" class="nav-btn">🌐 Удалённые станции</button>
+        </div>
+      </div>
+
+      <div class="nav-section">
+        <h3>Предобработка</h3>
+        <div id="preprocessingControls"></div>
+      </div>
+
+      <div class="nav-section">
+        <h3>Извлечение признаков</h3>
+        <div id="featureControls"></div>
+      </div>
+
+      <div class="nav-section">
+        <h3>AI Декодирование</h3>
+        <div id="aiControls"></div>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Основное содержимое -->
+  <main id="mainContent" class="main-content">
+    <header class="main-header">
+      <h1>V2K Decompiler</h1>
+      <div class="status-indicators">
+        <span id="statusAudio" class="status">🔴 Аудио: неактивно</span>
+        <span id="statusAI" class="status">🔴 AI: отключен</span>
+        <span id="statusProcessing" class="status">⚪ Обработка: ожидание</span>
+      </div>
+    </header>
+
+    <!-- Визуализации -->
+    <section class="visualization-grid">
+      <div class="viz-panel">
+        <h3>Waveform & Waterfall</h3>
+        <canvas id="waveformCanvas" width="800" height="120"></canvas>
+        <canvas id="waterfallCanvas" width="800" height="200"></canvas>
+      </div>
+      
+      <div class="viz-panel">
+        <h3>Огибающие сигнала</h3>
+        <canvas id="envelopeCanvas" width="800" height="200"></canvas>
+      </div>
+      
+      <div class="viz-panel">
+        <h3>Спектральный анализ</h3>
+        <canvas id="spectrumCanvas" width="800" height="200"></canvas>
+      </div>
+    </section>
+
+    <!-- Результаты декодирования -->
+    <section class="results-panel">
+      <h3>Результаты декодирования</h3>
+      <div id="decodedText" class="decoded-text">
+        <p>Текст появится здесь после обработки...</p>
+      </div>
+      <div class="confidence-indicator">
+        <span>Уверенность: </span>
+        <progress id="confidenceBar" value="0" max="100"></progress>
+        <span id="confidenceValue">0%</span>
+      </div>
+    </section>
+
+    <!-- Модальные окна -->
+    <div id="fileModal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Загрузка файлов</h3>
+        <div class="file-drop-zone" id="fileDropZone">
+          Перетащите файлы сюда или кликните для выбора
+          <input type="file" id="fileInput" multiple accept=".wav,.mp3,.flac,.ogg,.json,.txt">
+        </div>
+        <div id="fileList" class="file-list"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Подключение модулей -->
+  <script src="js/modules/utils.js"></script>
+  <script src="js/modules/audioInput.js"></script>
+  <script src="js/modules/sdrInput.js"></script>
+  <script src="js/modules/preprocessing.js"></script>
+  <script src="js/modules/featureExtraction.js"></script>
+  <script src="js/modules/visualization.js"></script>
+  <script src="js/modules/aiIntegration1.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
