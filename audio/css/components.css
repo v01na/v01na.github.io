@@ -1,0 +1,256 @@
+/* Элементы управления */
+.control-group {
+  margin-bottom: 1rem;
+}
+
+.control-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.control-input {
+  width: 100%;
+  padding: 0.5rem;
+  background: #000;
+  border: 1px solid #2a2a4a;
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+.control-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.control-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.control-checkbox input[type="checkbox"] {
+  accent-color: var(--accent-color);
+}
+
+.control-range {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.control-range input[type="range"] {
+  flex: 1;
+}
+
+.range-value {
+  min-width: 60px;
+  text-align: right;
+  font-family: monospace;
+}
+
+/* Кнопки действий */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--accent-color);
+  color: var(--primary-bg);
+}
+
+.btn-primary:hover {
+  background: #0db9c8;
+}
+
+.btn-secondary {
+  background: var(--secondary-bg);
+  color: var(--text-primary);
+  border: 1px solid #2a2a4a;
+}
+
+.btn-secondary:hover {
+  background: #2a2a4a;
+}
+
+.btn-danger {
+  background: var(--error-color);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #ff3333;
+}
+
+/* Списки файлов */
+.file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #000;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.file-action-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.file-action-btn:hover {
+  color: var(--accent-color);
+}
+
+/* Индикаторы загрузки */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #2a2a4a;
+  border-top: 2px solid var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Уведомления */
+.notification {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  padding: 1rem;
+  border-radius: 6px;
+  z-index: 3000;
+  max-width: 400px;
+  animation: slideIn 0.3s ease;
+}
+
+.notification.success {
+  background: var(--success-color);
+  color: #000;
+}
+
+.notification.error {
+  background: var(--error-color);
+  color: white;
+}
+
+.notification.warning {
+  background: var(--warning-color);
+  color: #000;
+}
+
+
+/* Стили для AI провайдеров */
+.provider-card {
+    background: #000;
+    border: 1px solid #2a2a4a;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.provider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.provider-config {
+    border-top: 1px solid #2a2a4a;
+    padding-top: 0.5rem;
+}
+
+.provider-status {
+    font-size: 0.8rem;
+    cursor: help;
+}
+
+.test-provider-btn {
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Стили для результатов экспериментов */
+.experiment-results {
+    background: #1a1a2e;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.provider-result {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    border-bottom: 1px solid #2a2a4a;
+}
+
+.provider-result:last-child {
+    border-bottom: none;
+}
+
+.result-confidence {
+    font-family: monospace;
+    color: var(--accent-color);
+}
+
+/* Индикаторы качества */
+.quality-indicator {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.quality-high { background: var(--success-color); }
+.quality-medium { background: var(--warning-color); }
+.quality-low { background: var(--error-color); }
+
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
