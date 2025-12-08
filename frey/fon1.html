@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Генератор фонем с ZIP-скачиванием</title>
+    <meta charset="utf-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            margin: 20px; 
+            max-width: 1000px; 
+            background: #f8f9fa;
+        }
+        .panel { 
+            background: white; 
+            padding: 20px; 
+            margin: 15px 0; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border: 1px solid #e0e0e0;
+        }
+        h2 { color: #2c3e50; margin-top: 0; }
+        h3 { color: #3498db; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; }
+        
+        .btn {
+            padding: 12px 20px;
+            margin: 8px 5px;
+            cursor: pointer;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+        .btn:hover { background: #2980b9; transform: translateY(-1px); }
+        .btn:disabled { background: #bdc3c7; cursor: not-allowed; }
+        .btn-success { background: #27ae60; }
+        .btn-success:hover { background: #219653; }
+        
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .checkbox-group label:hover { background: #e9ecef; }
+        .checkbox-group input { margin-right: 10px; }
+        
+        .progress-container {
+            background: #ecf0f1;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .progress-bar {
+            height: 20px;
+            background: #dfe6e9;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            width: 0%;
+            transition: width 0.3s;
+            border-radius: 10px;
+        }
+        
+        .phoneme-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .phoneme-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            transition: transform 0.2s;
+        }
+        .phoneme-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .phoneme-label {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .phoneme-ipa {
+            font-size: 14px;
+            color: #7f8c8d;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .phoneme-audio {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .status-box {
+            background: #e8f4fc;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .counter {
+            background: #3498db;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <h2>🎵 Генератор эталонных фонем</h2>
+        <p>Создайте библиотеку фонем для сравнения с неизвестными сигналами. Все файлы можно скачать одним ZIP-архивом.</p>
+    </div>
+
+    <div class="panel">
+        <div class="section-title">
+            <h3>1. Выберите наборы фонем</h3>
+            <span class="counter" id="selectedCount">0 выбрано</span>
+        </div>
+        
+        <div class="checkbox-group">
+            <label><input type="checkbox" id="rus_vowels" checked> Русские гласные (а, э, и, о, у, ы)</label>
+            <label><input type="checkbox" id="rus_consonants_voiceless"> Глухие согласные (п, т, к, с, ш, х)</label>
+            <label><input type="checkbox" id="rus_consonants_voiced"> Звонкие согласные (б, д, г, в, з, ж)</label>
+            <label><input type="checkbox" id="rus_sonorants"> Сонорные (м, н, л, р)</label>
+            <label><input type="checkbox" id="ipa_vowels"> IPA гласные (i, e, a, o, u)</label>
+            <label><input type="checkbox" id="affricates"> Аффрикаты (ц, ч)</label>
+        </div>
+        
+        <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+            <label><strong>Свои фонемы:</strong> (через запятую или пробел)</label>
+            <input type="text" id="custom_input" style="width:100%; padding:10px; margin-top:8px; border:1px solid #ddd; border-radius:5px;" 
+                   placeholder="например: а, б, в, ы, или а б в">
+            <div style="font-size:13px; color:#666; margin-top:5px;">Будет создан отдельный файл для каждого символа</div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>2. Настройки генерации</h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 20px 0;">
+            <div>
+                <label><strong>Длительность фонемы:</strong></label>
+                <div style="display: flex; align-items: center; margin-top: 8px;">
+                    <input type="range" id="duration_slider" min="0.5" max="2.0" step="0.1" value="1.0" style="flex:1;">
+                    <span id="duration_value" style="margin-left:15px; font-weight:bold; min-width:40px;">1.0 с</span>
+                </div>
+                <div style="font-size:13px; color:#666; margin-top:5px;">
+                    Гласные: 1.0-1.5 с, Согласные: 0.3-0.8 с
+                </div>
+            </div>
+            
+            <div>
+                <label><strong>Темп речи:</strong></label>
+                <select id="speech_rate" style="width:100%; padding:10px; margin-top:8px; border:1px solid #ddd; border-radius:5px;">
+                    <option value="0.7">Очень медленно</option>
+                    <option value="0.9">Медленно</option>
+                    <option value="1.0" selected>Нормально</option>
+                    <option value="1.2">Быстро</option>
+                    <option value="1.5">Очень быстро</option>
+                </select>
+            </div>
+            
+            <div>
+                <label><strong>Формат имени файла:</strong></label>
+                <select id="naming_format" style="width:100%; padding:10px; margin-top:8px; border:1px solid #ddd; border-radius:5px;">
+                    <option value="phoneme">Только фонема (а.wav)</option>
+                    <option value="numbered">С номером (01_а.wav)</option>
+                    <option value="detailed" selected>Детально (фонема_а.wav)</option>
+                    <option value="ipa">С IPA (а_[a].wav)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>3. Генерация и скачивание</h3>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="btn" id="btnGenerateAll">✨ Сгенерировать ВСЕ выбранные фонемы</button>
+            <button class="btn" id="btnTestOne">🎤 Тест одной фонемы</button>
+            <input type="text" id="test_phoneme" value="а" style="width:60px; padding:10px; border:1px solid #ddd; border-radius:5px;">
+        </div>
+        
+        <div id="progressPanel" style="display: none;">
+            <div class="progress-container">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                    <span id="progressStatus">Подготовка к генерации...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div id="currentPhoneme" style="text-align: center; margin-top: 10px; font-weight: bold;"></div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <button class="btn btn-success" id="btnDownloadZip" style="display: none; padding: 15px 30px; font-size: 16px;">
+                📥 Скачать ВСЕ фонемы ZIP-архивом 
+                <span id="zipCount">(0 файлов)</span>
+            </button>
+            <div id="zipSize" style="margin-top: 10px; color: #666; font-size: 14px;"></div>
+        </div>
+    </div>
+
+    <div class="panel" id="resultsPanel" style="display: none;">
+        <div class="section-title">
+            <h3>📊 Сгенерированные фонемы</h3>
+            <span class="counter" id="generatedCount">0</span>
+        </div>
+        
+        <div class="phoneme-grid" id="resultsContainer">
+            <!-- Фонемы будут появляться здесь -->
+        </div>
+    </div>
+
+<script>
+// ==============================
+// КОНФИГУРАЦИЯ И ДАННЫЕ
+// ==============================
+const PHONEME_SETS = {
+    rus_vowels: {
+        name: "Русские гласные",
+        phonemes: ["а", "э", "и", "о", "у", "ы"],
+        ipa: ["a", "ɛ", "i", "o", "u", "ɨ"],
+        type: "vowel"
+    },
+    rus_consonants_voiceless: {
+        name: "Глухие согласные",
+        phonemes: ["п", "т", "к", "с", "ш", "х"],
+        ipa: ["p", "t", "k", "s", "ʂ", "x"],
+        type: "consonant"
+    },
+    rus_consonants_voiced: {
+        name: "Звонкие согласные",
+        phonemes: ["б", "д", "г", "в", "з", "ж"],
+        ipa: ["b", "d", "ɡ", "v", "z", "ʐ"],
+        type: "consonant"
+    },
+    rus_sonorants: {
+        name: "Сонорные",
+        phonemes: ["м", "н", "л", "р"],
+        ipa: ["m", "n", "l", "r"],
+        type: "sonorant"
+    },
+    ipa_vowels: {
+        name: "IPA гласные",
+        phonemes: ["i", "e", "a", "o", "u"],
+        ipa: ["i", "e", "a", "o", "u"],
+        type: "vowel"
+    },
+    affricates: {
+        name: "Аффрикаты",
+        phonemes: ["ц", "ч"],
+        ipa: ["ts", "tɕ"],
+        type: "affricate"
+    }
+};
+
+// Глобальные переменные
+let generatedPhonemes = []; // {name, blob, phoneme, ipa, type}
+let isGenerating = false;
+let audioContext = null;
+
+// ==============================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ==============================
+function updateSelectedCount() {
+    let count = 0;
+    for (const setId in PHONEME_SETS) {
+        if (document.getElementById(setId).checked) count++;
+    }
+    document.getElementById('selectedCount').textContent = `${count} выбрано`;
+}
+
+function updateDurationValue() {
+    const value = document.getElementById('duration_slider').value;
+    document.getElementById('duration_value').textContent = `${value} с`;
+}
+
+function getSelectedPhonemes() {
+    let phonemes = [];
+    let details = [];
+    
+    // Добавляем выбранные наборы
+    for (const [setId, setData] of Object.entries(PHONEME_SETS)) {
+        if (document.getElementById(setId).checked) {
+            setData.phonemes.forEach((phoneme, idx) => {
+                phonemes.push(phoneme);
+                details.push({
+                    phoneme: phoneme,
+                    ipa: setData.ipa[idx],
+                    type: setData.type,
+                    setName: setData.name
+                });
+            });
+        }
+    }
+    
+    // Добавляем пользовательские фонемы
+    const customInput = document.getElementById('custom_input').value.trim();
+    if (customInput) {
+        // Разделяем по запятым или пробелам
+        const customPhonemes = customInput.split(/[, ]+/).filter(p => p.length > 0);
+        customPhonemes.forEach(phoneme => {
+            if (!phonemes.includes(phoneme)) {
+                phonemes.push(phoneme);
+                details.push({
+                    phoneme: phoneme,
+                    ipa: phoneme,
+                    type: "custom",
+                    setName: "Пользовательские"
+                });
+            }
+        });
+    }
+    
+    return {phonemes, details};
+}
+
+// ==============================
+// АУДИО ГЕНЕРАЦИЯ
+// ==============================
+function getAudioContext() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioContext;
+}
+
+function audioBufferToWav(buffer) {
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const format = 1; // PCM
+    const bitDepth = 16;
+    
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = buffer.length * blockAlign;
+    
+    const arrayBuffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(arrayBuffer);
+    
+    // WAV-заголовок
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitDepth, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
+    
+    // PCM-данные
+    let offset = 44;
+    const channelData = [];
+    for (let channel = 0; channel < numChannels; channel++) {
+        channelData.push(buffer.getChannelData(channel));
+    }
+    
+    for (let i = 0; i < buffer.length; i++) {
+        for (let channel = 0; channel < numChannels; channel++) {
+            const sample = channelData[channel][i];
+            const intSample = Math.max(-32768, Math.min(32767, Math.round(sample * 32767)));
+            view.setInt16(offset, intSample, true);
+            offset += 2;
+        }
+    }
+    
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+}
+
+function writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
+}
+
+// Генерация фонемы через Web Speech API
+async function generatePhoneme(phoneme, detail, progressCallback) {
+    return new Promise((resolve, reject) => {
+        if (!('speechSynthesis' in window)) {
+            reject('Ваш браузер не поддерживает синтез речи. Используйте Chrome или Edge.');
+            return;
+        }
+        
+        const utterance = new SpeechSynthesisUtterance(phoneme);
+        utterance.lang = 'ru-RU';
+        utterance.rate = parseFloat(document.getElementById('speech_rate').value);
+        
+        // Выбираем русский голос
+        const voices = speechSynthesis.getVoices();
+        const russianVoice = voices.find(v => v.lang.startsWith('ru'));
+        if (russianVoice) {
+            utterance.voice = russianVoice;
+        }
+        
+        // Если голоса еще не загружены, ждем
+        if (voices.length === 0) {
+            speechSynthesis.onvoiceschanged = () => {
+                const voices = speechSynthesis.getVoices();
+                const russianVoice = voices.find(v => v.lang.startsWith('ru'));
+                if (russianVoice) utterance.voice = russianVoice;
+                proceedWithGeneration();
+            };
+        } else {
+            proceedWithGeneration();
+        }
+        
+        function proceedWithGeneration() {
+            // Используем OfflineAudioContext для прямой генерации
+            const ctx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(
+                1, // каналы
+                44100 * 2, // длина буфера (2 секунды максимум)
+                44100 // частота дискретизации
+            );
+            
+            const destination = ctx.createMediaStreamDestination();
+            const mediaRecorder = new MediaRecorder(destination.stream);
+            const audioChunks = [];
+            
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+            
+            mediaRecorder.onstop = async () => {
+                try {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const arrayBuffer = await audioBlob.arrayBuffer();
+                    const audioBuffer = await getAudioContext().decodeAudioData(arrayBuffer);
+                    
+                    // Обрезаем тишину в начале и конце
+                    const trimmedBuffer = trimSilence(audioBuffer);
+                    const wavBlob = audioBufferToWav(trimmedBuffer);
+                    
+                    resolve({
+                        blob: wavBlob,
+                        phoneme: phoneme,
+                        detail: detail,
+                        size: wavBlob.size
+                    });
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            
+            // Начинаем запись и запускаем синтез
+            mediaRecorder.start();
+            speechSynthesis.speak(utterance);
+            
+            // Останавливаем запись через заданное время
+            const duration = parseFloat(document.getElementById('duration_slider').value) * 1000;
+            setTimeout(() => {
+                if (mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+            }, duration + 500);
+            
+            // Останавливаем через onend
+            utterance.onend = () => {
+                setTimeout(() => {
+                    if (mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                    }
+                }, 500);
+            };
+        }
+    });
+}
+
+function trimSilence(audioBuffer, threshold = 0.01) {
+    const channels = [];
+    for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+        channels.push(audioBuffer.getChannelData(i));
+    }
+    
+    // Находим ненулевые сэмплы
+    let start = audioBuffer.length;
+    let end = 0;
+    
+    for (let i = 0; i < audioBuffer.length; i++) {
+        let hasSignal = false;
+        for (const channel of channels) {
+            if (Math.abs(channel[i]) > threshold) {
+                hasSignal = true;
+                break;
+            }
+        }
+        
+        if (hasSignal) {
+            start = Math.min(start, i);
+            end = Math.max(end, i);
+        }
+    }
+    
+    // Добавляем небольшие отступы
+    start = Math.max(0, start - 4410); // 100ms
+    end = Math.min(audioBuffer.length, end + 4410); // 100ms
+    
+    const length = end - start;
+    if (length <= 0) return audioBuffer;
+    
+    // Создаем новый буфер
+    const newBuffer = getAudioContext().createBuffer(
+        audioBuffer.numberOfChannels,
+        length,
+        audioBuffer.sampleRate
+    );
+    
+    for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+        const oldData = audioBuffer.getChannelData(i);
+        const newData = newBuffer.getChannelData(i);
+        newData.set(oldData.subarray(start, end));
+    }
+    
+    return newBuffer;
+}
+
+// ==============================
+// ОТОБРАЖЕНИЕ РЕЗУЛЬТАТОВ
+// ==============================
+function addPhonemeCard(phonemeData) {
+    const container = document.getElementById('resultsContainer');
+    
+    const card = document.createElement('div');
+    card.className = 'phoneme-card';
+    
+    const label = document.createElement('div');
+    label.className = 'phoneme-label';
+    label.textContent = phonemeData.phoneme;
+    
+    const ipa = document.createElement('div');
+    ipa.className = 'phoneme-ipa';
+    ipa.textContent = `/${phonemeData.detail.ipa}/ (${phonemeData.detail.type})`;
+    
+    const audio = document.createElement('audio');
+    audio.className = 'phoneme-audio';
+    audio.controls = true;
+    audio.src = URL.createObjectURL(phonemeData.blob);
+    
+    const info = document.createElement('div');
+    info.style.fontSize = '12px';
+    info.style.color = '#7f8c8d';
+    info.style.marginTop = '8px';
+    info.style.textAlign = 'center';
+    info.textContent = `${Math.round(phonemeData.blob.size / 1024)} KB`;
+    
+    card.appendChild(label);
+    card.appendChild(ipa);
+    card.appendChild(audio);
+    card.appendChild(info);
+    container.appendChild(card);
+    
+    // Обновляем счетчик
+    const count = document.querySelectorAll('.phoneme-card').length;
+    document.getElementById('generatedCount').textContent = count;
+    
+    // Показываем панель результатов
+    document.getElementById('resultsPanel').style.display = 'block';
+}
+
+// ==============================
+// ZIP-АРХИВИРОВАНИЕ
+// ==============================
+async function createZipArchive() {
+    if (generatedPhonemes.length === 0) {
+        alert('Нет сгенерированных фонем для архивации');
+        return null;
+    }
+    
+    const zip = new JSZip();
+    const folder = zip.folder("phonemes");
+    
+    const namingFormat = document.getElementById('naming_format').value;
+    
+    for (let i = 0; i < generatedPhonemes.length; i++) {
+        const data = generatedPhonemes[i];
+        let filename;
+        
+        switch (namingFormat) {
+            case 'phoneme':
+                filename = `${data.phoneme}.wav`;
+                break;
+            case 'numbered':
+                filename = `${String(i+1).padStart(2, '0')}_${data.phoneme}.wav`;
+                break;
+            case 'detailed':
+                filename = `фонема_${data.phoneme}.wav`;
+                break;
+            case 'ipa':
+                filename = `${data.phoneme}_[${data.detail.ipa}].wav`;
+                break;
+        }
+        
+        folder.file(filename, data.blob);
+    }
+    
+    // Добавляем README файл
+    const readmeContent = `Набор эталонных фонем для V2k Radio Decompiler
+Сгенерировано: ${new Date().toLocaleString()}
+Всего фонем: ${generatedPhonemes.length}
+
+Список фонем:
+${generatedPhonemes.map((p, i) => `${i+1}. ${p.phoneme} (/${p.detail.ipa}/) - ${p.detail.type}`).join('\n')}
+
+Использование:
+1. Распакуйте архив
+2. Загрузите файлы .wav в инструмент V2k Decompiler
+3. Извлеките признаки (кнопка "Извлечь все")
+4. Используйте для сравнения с неизвестными сигналами`;
+    
+    folder.file("README.txt", readmeContent);
+    
+    return await zip.generateAsync({type: "blob"});
+}
+
+// ==============================
+// ОБРАБОТЧИКИ СОБЫТИЙ
+// ==============================
+document.getElementById('btnGenerateAll').addEventListener('click', async () => {
+    if (isGenerating) return;
+    
+    const {phonemes, details} = getSelectedPhonemes();
+    if (phonemes.length === 0) {
+        alert('Выберите хотя бы один набор фонем!');
+        return;
+    }
+    
+    // Сбрасываем предыдущие результаты
+    generatedPhonemes = [];
+    document.getElementById('resultsContainer').innerHTML = '';
+    document.getElementById('btnDownloadZip').style.display = 'none';
+    
+    // Показываем прогресс
+    document.getElementById('progressPanel').style.display = 'block';
+    document.getElementById('progressStatus').textContent = 'Подготовка к генерации...';
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('progressPercent').textContent = '0%';
+    
+    isGenerating = true;
+    
+    try {
+        for (let i = 0; i < phonemes.length; i++) {
+            const phoneme = phonemes[i];
+            const detail = details[i];
+            
+            // Обновляем прогресс
+            const progress = ((i) / phonemes.length) * 100;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+            document.getElementById('progressPercent').textContent = `${Math.round(progress)}%`;
+            document.getElementById('currentPhoneme').textContent = 
+                `Генерация: "${phoneme}" (${i+1}/${phonemes.length})`;
+            document.getElementById('progressStatus').textContent = 
+                `Генерируем фонему "${phoneme}"...`;
+            
+            try {
+                const result = await generatePhoneme(phoneme, detail, (p) => {
+                    // Callback для более детального прогресса
+                });
+                
+                generatedPhonemes.push(result);
+                addPhonemeCard(result);
+                
+            } catch (err) {
+                console.error(`Ошибка генерации фонемы "${phoneme}":`, err);
+                document.getElementById('progressStatus').textContent = 
+                    `Пропускаем "${phoneme}" (ошибка генерации)`;
+            }
+            
+            // Небольшая пауза между фонемами
+            await new Promise(r => setTimeout(r, 300));
+        }
+        
+        // Завершаем прогресс
+        document.getElementById('progressFill').style.width = '100%';
+        document.getElementById('progressPercent').textContent = '100%';
+        document.getElementById('progressStatus').textContent = 
+            `Генерация завершена! Создано ${generatedPhonemes.length} фонем`;
+        document.getElementById('currentPhoneme').textContent = '';
+        
+        // Показываем кнопку скачивания ZIP
+        document.getElementById('btnDownloadZip').style.display = 'block';
+        document.getElementById('zipCount').textContent = `(${generatedPhonemes.length} файлов)`;
+        
+        // Рассчитываем примерный размер
+        const totalSize = generatedPhonemes.reduce((sum, p) => sum + p.size, 0);
+        document.getElementById('zipSize').textContent = 
+            `Примерный размер архива: ${Math.round(totalSize / 1024)} KB`;
+        
+    } catch (error) {
+        console.error('Ошибка генерации:', error);
+        alert(`Ошибка генерации: ${error.message}`);
+    } finally {
+        isGenerating = false;
+    }
+});
+
+document.getElementById('btnTestOne').addEventListener('click', async () => {
+    const phoneme = document.getElementById('test_phoneme').value.trim();
+    if (!phoneme) return;
+    
+    try {
+        const result = await generatePhoneme(phoneme, {
+            phoneme: phoneme,
+            ipa: phoneme,
+            type: 'test',
+            setName: 'Тест'
+        });
+        
+        generatedPhonemes.push(result);
+        addPhonemeCard(result);
+        
+        // Показываем кнопку скачивания если есть фонемы
+        if (generatedPhonemes.length > 0) {
+            document.getElementById('btnDownloadZip').style.display = 'block';
+            document.getElementById('zipCount').textContent = `(${generatedPhonemes.length} файлов)`;
+        }
+        
+    } catch (error) {
+        alert(`Ошибка генерации тестовой фонемы: ${error.message}`);
+    }
+});
+
+document.getElementById('btnDownloadZip').addEventListener('click', async () => {
+    if (generatedPhonemes.length === 0) return;
+    
+    const btn = document.getElementById('btnDownloadZip');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⌛ Создание ZIP-архива...';
+    btn.disabled = true;
+    
+    try {
+        const zipBlob = await createZipArchive();
+        if (!zipBlob) return;
+        
+        // Создаем ссылку для скачивания
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `phonemes_${new Date().toISOString().slice(0,10)}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+        
+    } catch (error) {
+        console.error('Ошибка создания ZIP:', error);
+        alert('Ошибка создания ZIP-архива');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+});
+
+// ==============================
+// ИНИЦИАЛИЗАЦИЯ
+// ==============================
+document.addEventListener('DOMContentLoaded', () => {
+    // Обновляем счетчики при загрузке
+    updateSelectedCount();
+    updateDurationValue();
+    
+    // Обработчики событий для обновления UI
+    document.getElementById('duration_slider').addEventListener('input', updateDurationValue);
+    
+    const checkboxes = document.querySelectorAll('.checkbox-group input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', updateSelectedCount);
+    });
+    
+    // Инициализация голосов TTS
+    if ('speechSynthesis' in window) {
+        speechSynthesis.getVoices(); // Инициализируем
+    }
+    
+    // Пример: предвыбор всех наборов
+    document.getElementById('rus_vowels').checked = true;
+    document.getElementById('rus_consonants_voiceless').checked = true;
+    document.getElementById('rus_consonants_voiced').checked = true;
+    document.getElementById('rus_sonorants').checked = true;
+    updateSelectedCount();
+});
+</script>
+</body>
+</html>
