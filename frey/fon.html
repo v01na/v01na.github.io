@@ -1,0 +1,321 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Генератор фонем через TTS</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial; margin: 20px; max-width: 800px; }
+        .panel { background: #f0f8ff; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        button { padding: 10px; margin: 5px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 4px; }
+        button:disabled { background: #ccc; }
+        audio { display: block; margin: 10px 0; width: 100%; }
+        .status { padding: 10px; background: #e8f5e9; border-radius: 4px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h2>Генератор фонем/букв через синтез речи (TTS)</h2>
+    
+    <div class="panel">
+        <h3>Наборы для генерации</h3>
+        <label>
+            <input type="checkbox" id="rus_vowels" checked> Русские гласные (а, э, и, о, у, ы)
+        </label><br>
+        <label>
+            <input type="checkbox" id="rus_consonants"> Русские согласные (п, т, к, б, д, г, с, ш, х, м, н, л, р)
+        </label><br>
+        <label>
+            <input type="checkbox" id="ipa_vowels"> IPA гласные (i, e, a, o, u)
+        </label><br>
+        <label>
+            <input type="checkbox" id="custom_set"> Свои фонемы (через запятую):
+            <input type="text" id="custom_input" style="width:300px" placeholder="а, б, в, ш, ж">
+        </label>
+        
+        <div style="margin-top:15px">
+            <label>Длительность (сек): <input type="number" id="phoneme_dur" value="1.0" min="0.5" max="3" step="0.1"></label>
+            <label style="margin-left:20px">Темп речи: 
+                <select id="speech_rate">
+                    <option value="0.8">Медленный</option>
+                    <option value="1.0" selected>Нормальный</option>
+                    <option value="1.2">Быстрый</option>
+                </select>
+            </label>
+        </div>
+        
+        <div style="margin-top:15px">
+            <button id="btnGenerateAll">Сгенерировать ВСЕ выбранные фонемы</button>
+            <button id="btnTestOne">Тест одной фонемы: <input type="text" id="test_phoneme" value="а" style="width:50px"></button>
+        </div>
+    </div>
+    
+    <div class="panel" id="progressPanel" style="display:none">
+        <h3>Генерация...</h3>
+        <div id="progressStatus" class="status">Подготовка...</div>
+        <progress id="genProgress" value="0" max="100" style="width:100%"></progress>
+        <div id="currentPhoneme"></div>
+    </div>
+    
+    <div class="panel">
+        <h3>Результаты</h3>
+        <div id="resultsContainer"></div>
+    </div>
+
+<script>
+// Очередь для генерации
+let phonemeQueue = [];
+let isGenerating = false;
+let audioContext = null;
+
+// Инициализация AudioContext
+function getAudioContext() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return audioContext;
+}
+
+// Генерация WAV из AudioBuffer
+function audioBufferToWav(buffer) {
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const format = 1; // PCM
+    const bitDepth = 16;
+    
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = buffer.length * blockAlign;
+    
+    const arrayBuffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(arrayBuffer);
+    
+    // WAV-заголовок
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitDepth, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
+    
+    // PCM-данные
+    let offset = 44;
+    for (let i = 0; i < buffer.length; i++) {
+        for (let channel = 0; channel < numChannels; channel++) {
+            const sample = buffer.getChannelData(channel)[i];
+            const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+            view.setInt16(offset, intSample, true);
+            offset += 2;
+        }
+    }
+    
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+}
+
+function writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
+}
+
+// Скачивание файла
+function downloadWav(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
+}
+
+// Генерация фонемы через Web Speech API
+function generatePhoneme(phoneme, callback) {
+    if (!('speechSynthesis' in window)) {
+        alert('Ваш браузер не поддерживает синтез речи. Используйте Chrome или Edge.');
+        return;
+    }
+    
+    const utterance = new SpeechSynthesisUtterance(phoneme);
+    utterance.lang = 'ru-RU';
+    utterance.rate = parseFloat(document.getElementById('speech_rate').value);
+    
+    // Пытаемся выбрать русский голос
+    const voices = speechSynthesis.getVoices();
+    const russianVoice = voices.find(v => v.lang.startsWith('ru'));
+    if (russianVoice) {
+        utterance.voice = russianVoice;
+    }
+    
+    // Создаем MediaRecorder для захвата аудио
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            const mediaRecorder = new MediaRecorder(stream);
+            const audioChunks = [];
+            
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+            };
+            
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                // Конвертируем в WAV
+                fetch(audioUrl)
+                    .then(response => response.arrayBuffer())
+                    .then(arrayBuffer => getAudioContext().decodeAudioData(arrayBuffer))
+                    .then(audioBuffer => {
+                        const wavBlob = audioBufferToWav(audioBuffer);
+                        callback(wavBlob, phoneme);
+                        
+                        // Останавливаем все треки
+                        stream.getTracks().forEach(track => track.stop());
+                    });
+            };
+            
+            // Начинаем запись и запускаем синтез
+            mediaRecorder.start();
+            speechSynthesis.speak(utterance);
+            
+            // Останавливаем запись через заданное время
+            const duration = parseFloat(document.getElementById('phoneme_dur').value) * 1000;
+            setTimeout(() => {
+                if (mediaRecorder.state === 'recording') {
+                    mediaRecorder.stop();
+                }
+            }, duration + 500); // +500 мс на запас
+        })
+        .catch(err => {
+            console.error('Ошибка доступа к микрофону:', err);
+            alert('Нужно разрешить доступ к микрофону для записи звука с TTS');
+        });
+}
+
+// Основная функция генерации
+async function generateAllPhonemes() {
+    const sets = [];
+    
+    if (document.getElementById('rus_vowels').checked) {
+        sets.push(['а', 'э', 'и', 'о', 'у', 'ы']);
+    }
+    
+    if (document.getElementById('rus_consonants').checked) {
+        sets.push(['п', 'т', 'к', 'б', 'д', 'г', 'с', 'ш', 'х', 'м', 'н', 'л', 'р']);
+    }
+    
+    if (document.getElementById('ipa_vowels').checked) {
+        sets.push(['i', 'e', 'a', 'o', 'u']);
+    }
+    
+    if (document.getElementById('custom_set').checked) {
+        const custom = document.getElementById('custom_input').value
+            .split(',')
+            .map(p => p.trim())
+            .filter(p => p.length > 0);
+        if (custom.length > 0) sets.push(custom);
+    }
+    
+    // Объединяем все наборы
+    phonemeQueue = sets.flat();
+    
+    if (phonemeQueue.length === 0) {
+        alert('Выберите хотя бы один набор фонем!');
+        return;
+    }
+    
+    // Показываем панель прогресса
+    document.getElementById('progressPanel').style.display = 'block';
+    document.getElementById('genProgress').max = phonemeQueue.length;
+    document.getElementById('genProgress').value = 0;
+    
+    // Генерируем по очереди
+    for (let i = 0; i < phonemeQueue.length; i++) {
+        const phoneme = phonemeQueue[i];
+        
+        document.getElementById('currentPhoneme').textContent = 
+            `Генерация: ${phoneme} (${i+1}/${phonemeQueue.length})`;
+        
+        await new Promise(resolve => {
+            generatePhoneme(phoneme, (wavBlob, generatedPhoneme) => {
+                // Создаем элемент для прослушивания и скачивания
+                const container = document.getElementById('resultsContainer');
+                const div = document.createElement('div');
+                div.style.cssText = 'margin:10px 0; padding:10px; background:white; border-radius:5px;';
+                
+                const audio = document.createElement('audio');
+                audio.controls = true;
+                audio.src = URL.createObjectURL(wavBlob);
+                
+                const downloadBtn = document.createElement('button');
+                downloadBtn.textContent = `Скачать "${generatedPhoneme}.wav"`;
+                downloadBtn.onclick = () => downloadWav(wavBlob, `фонема_${generatedPhoneme}.wav`);
+                downloadBtn.style.cssText = 'margin-left:10px; background:#2196F3;';
+                
+                div.appendChild(document.createTextNode(`Фонема "${generatedPhoneme}": `));
+                div.appendChild(audio);
+                div.appendChild(downloadBtn);
+                container.appendChild(div);
+                
+                // Обновляем прогресс
+                document.getElementById('genProgress').value = i + 1;
+                document.getElementById('progressStatus').textContent = 
+                    `Сгенерировано: ${i+1}/${phonemeQueue.length}`;
+                
+                resolve();
+            });
+        });
+        
+        // Пауза между генерациями
+        await new Promise(r => setTimeout(r, 500));
+    }
+    
+    document.getElementById('progressStatus').textContent = 'Генерация завершена!';
+    document.getElementById('currentPhoneme').textContent = '';
+}
+
+// Обработчики событий
+document.getElementById('btnGenerateAll').addEventListener('click', generateAllPhonemes);
+
+document.getElementById('btnTestOne').addEventListener('click', () => {
+    const phoneme = document.getElementById('test_phoneme').value.trim();
+    if (!phoneme) return;
+    
+    generatePhoneme(phoneme, (wavBlob, generatedPhoneme) => {
+        const container = document.getElementById('resultsContainer');
+        const div = document.createElement('div');
+        div.style.cssText = 'margin:10px 0; padding:10px; background:#e8f5e9; border-radius:5px;';
+        
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = URL.createObjectURL(wavBlob);
+        
+        const downloadBtn = document.createElement('button');
+        downloadBtn.textContent = `Скачать "${generatedPhoneme}.wav"`;
+        downloadBtn.onclick = () => downloadWav(wavBlob, `test_${generatedPhoneme}.wav`);
+        downloadBtn.style.cssText = 'margin-left:10px; background:#4CAF50;';
+        
+        div.appendChild(document.createTextNode(`Тест "${generatedPhoneme}": `));
+        div.appendChild(audio);
+        div.appendChild(downloadBtn);
+        container.appendChild(div);
+    });
+});
+
+// Инициализация голосов TTS
+window.speechSynthesis.onvoiceschanged = function() {
+    console.log('Голоса TTS загружены:', speechSynthesis.getVoices().length);
+};
+</script>
+</body>
+</html>
