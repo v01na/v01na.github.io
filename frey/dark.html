@@ -42,19 +42,11 @@
       gap: 12px;
       overflow-y: auto;
       padding-right: 4px;
-    }.left-panel::-webkit-scrollbar {width: 6px;}.left-panel::-webkit-scrollbar-track {
-      background: rgba(30, 41, 59, 0.3);
-      border-radius: 3px;
-    }
-    .left-panel::-webkit-scrollbar-thumb {
-      background: #475569;
-      border-radius: 3px;
-    }.right-panel {
-      flex: 1;
-      display: flex;
+    }.left-panel::-webkit-scrollbar {width: 6px;}.left-panel::-webkit-scrollbar-track {background: rgba(30, 41, 59, 0.3);border-radius: 3px;}
+    .left-panel::-webkit-scrollbar-thumb {background: #475569;border-radius: 3px;}.right-panel {
+      flex: 1;display: flex;
       flex-direction: column;
-      gap: 12px;
-      min-height: 0;
+      gap: 12px;min-height: 0;
     }.glass-panel {
       background: rgba(30, 41, 59, 0.7);
       backdrop-filter: blur(10px);
@@ -100,21 +92,9 @@
       color: #cbd5e1;
     }
     
-    .results-content::-webkit-scrollbar {
-      width: 6px;
-    }
-    
-    .results-content::-webkit-scrollbar-track {
-      background: rgba(30, 41, 59, 0.3);
-      border-radius: 3px;
-    }
-    
-    .results-content::-webkit-scrollbar-thumb {
-      background: #475569;
-      border-radius: 3px;
-    }
-    
-    /* Канвасы */
+    .results-content::-webkit-scrollbar {width: 6px;}
+    .results-content::-webkit-scrollbar-track {background: rgba(30, 41, 59, 0.3);border-radius: 3px;}
+    .results-content::-webkit-scrollbar-thumb {background: #475569;border-radius: 3px;}
     .canvas-container {
       background: #1e293b;
       border: 1px solid #334155;
@@ -154,8 +134,6 @@
     .section-4::before { background: #f59e0b; }
     .section-5::before { background: #06b6d4; }
     .section-6::before { background: #84cc16; }
-    
-    /* Кастомные инпуты */
     .input-dark {
       width: 100%;
       background: #1e293b;
@@ -211,9 +189,7 @@
       transition: all 0.2s ease;
     }
     
-    .custom-checkbox:hover .checkmark {
-      border-color: #3b82f6;
-    }
+    .custom-checkbox:hover .checkmark {border-color: #3b82f6;}
     
     .custom-checkbox input:checked ~ .checkmark {
       background-color: #3b82f6;
@@ -238,11 +214,7 @@
     }
     
     /* Кастомные числовые инпуты (без дефолтных стрелок) */
-    .number-input-container {
-      position: relative;
-      width: 100%;
-    }
-    
+    .number-input-container {position: relative;width: 100%;}
     .number-input-container input[type="number"] {
       width: 100%;
       padding: 10px 44px 10px 12px;
@@ -287,25 +259,10 @@
       font-size: 12px;
       font-weight: 600;
     }
-    
-    .number-input-button:hover {
-      background: #475569;
-    }
-    
-    .number-input-button:active {
-      background: #1e293b;
-    }
-    
-    .number-input-button:first-child {
-      border-bottom: 1px solid #1e293b;
-    }
-    
-    /* Кастомные селекты */
-    .custom-select {
-      position: relative;
-      width: 100%;
-    }
-    
+    .number-input-button:hover {background: #475569;}
+    .number-input-button:active {background: #1e293b;}
+    .number-input-button:first-child {border-bottom: 1px solid #1e293b;}
+    .custom-select {position: relative;width: 100%;}
     .custom-select select {
       width: 100%;
       padding: 10px 40px 10px 12px;
@@ -322,18 +279,8 @@
       -moz-appearance: none;
       transition: all 0.2s ease;
     }
-    
-    .custom-select select:hover {
-      border-color: #475569;
-    }
-    
-    .custom-select select:focus {
-      outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-    }
-    
-    /* Кнопки */
+    .custom-select select:hover {border-color: #475569;}
+    .custom-select select:focus {outline: none;border-color: #3b82f6;box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);}
     .btn {
       padding: 10px 16px;
       border-radius: 8px;
@@ -349,21 +296,14 @@
       gap: 6px;
     }
     
-    .btn-primary {
-      background: #3b82f6;
-      color: white;
-    }
-    
+    .btn-primary {background: #3b82f6;color: white;}
     .btn-primary:hover {
       background: #2563eb;
       transform: translateY(-1px);
       box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
     
-    .btn-secondary {
-      background: #475569;
-      color: white;
-    }
+    .btn-secondary {background: #475569;color: white;}
     
     .btn-secondary:hover {
       background: #334155;
@@ -393,9 +333,7 @@
       color: white;
     }
     
-    .btn-warning:hover {
-      background: #d97706;
-    }
+    .btn-warning:hover {background: #d97706;}
     
     .btn-ghost {
       background: transparent;
@@ -403,10 +341,7 @@
       color: #cbd5e1;
     }
     
-    .btn-ghost:hover {
-      background: #334155;
-      border-color: #64748b;
-    }
+    .btn-ghost:hover {background: #334155;border-color: #64748b;}
     
     /* Прогресс бар */
     .progress-container {
@@ -892,7 +827,7 @@
     </div>
   </div>
 
-<script src="frey.js"></script>
+<script src="js/frey.js"></script>
 
 </body>
 </html>
