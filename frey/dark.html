@@ -289,8 +289,19 @@
             </label>
             
             <div class="btn-group">
-              <button id="btnExtract" class="btn btn-primary">Извлечь огибающие</button>
-              <button id="btnMatch" class="btn btn-success">Сопоставить</button>
+              <button id="btnExtract" class="btn btn-primary"><!-- Извлечь огибающие -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 12H5L7 8L11 16L13 11L15 14L17 10L19 12H21" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M3 16L5 14L7 18L11 10L13 15L15 12L17 16L19 14L21 16" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2"/>
+                </svg>
+              </button>
+              <button id="btnMatch" class="btn btn-success"><!-- 2. Сопоставить -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                   <path d="M8 16L4 12L8 8" stroke-linecap="round" stroke-linejoin="round"/>
+                   <path d="M4 12H16" stroke-linecap="round"/>
+                   <path d="M16 8L20 12L16 16" stroke-linecap="round" stroke-linejoin="round"/>
+                   <path d="M20 12H8" stroke-linecap="round"/>
+                </svg></button>
               <button id="btnExport" class="btn btn-warning">Экспорт JSON</button>
               <button id="btnSelfTest" class="btn btn-secondary">Self-test</button>
             </div>
