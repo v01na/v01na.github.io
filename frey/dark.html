@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <title>V2k Radio Decompiler — Clustering + NLP</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" href="data:image/png;base64,iVBORw0KGgo=" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    * {margin: 0;padding: 0;box-sizing: border-box;}::-webkit-scrollbar{width:0px;}
+    html, body {height: 100%;overflow: hidden;}
+    body {font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;background: #0f172a;color: #e2e8f0;}
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {-webkit-appearance: none;margin: 0;}
+    input[type="number"] {-moz-appearance: textfield;appearance: textfield
+    .main-container {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 12px;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    }.header {
+      flex-shrink: 0;
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }.content-wrapper {
+      flex: 1;
+      display: flex;
+      gap: 12px;
+      min-height: 0;
+      overflow: hidden;
+    }.left-panel {
+      width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }.left-panel::-webkit-scrollbar {width: 6px;}.left-panel::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.3);
+      border-radius: 3px;
+    }
+    .left-panel::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }.right-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+    }.glass-panel {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+    }.visualization-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }.visualization-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+      padding: 8px 4px 8px 0;
+    }.visualization-content::-webkit-scrollbar {width: 6px;}
+    .visualization-content::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.3);
+      border-radius: 3px;
+    }.visualization-content::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }.results-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }.results-content {
+      flex: 1;
+      overflow-y: auto;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'JetBrains Mono', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #cbd5e1;
+    }
+    
+    .results-content::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .results-content::-webkit-scrollbar-track {
+      background: rgba(30, 41, 59, 0.3);
+      border-radius: 3px;
+    }
+    
+    .results-content::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }
+    
+    /* Канвасы */
+    .canvas-container {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 4px;
+    }
+    
+    /* Заголовки */
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .section-title::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    
+    .section-1::before { background: #3b82f6; }
+    .section-2::before { background: #10b981; }
+    .section-3::before { background: #8b5cf6; }
+    .section-4::before { background: #f59e0b; }
+    .section-5::before { background: #06b6d4; }
+    .section-6::before { background: #84cc16; }
+    
+    /* Кастомные инпуты */
+    .input-dark {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+    
+    .input-dark:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    
+    .input-dark:hover {
+      border-color: #475569;
+    }
+    
+    /* Кастомные чекбоксы */
+    .custom-checkbox {
+      position: relative;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      padding-left: 32px;
+      min-height: 24px;
+      margin-bottom: 8px;
+    }
+    
+    .custom-checkbox input {
+      position: absolute;
+      opacity: 0;
+      cursor: pointer;
+      height: 0;
+      width: 0;
+    }
+    
+    .checkmark {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 20px;
+      width: 20px;
+      background-color: #1e293b;
+      border: 2px solid #475569;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+    
+    .custom-checkbox:hover .checkmark {
+      border-color: #3b82f6;
+    }
+    
+    .custom-checkbox input:checked ~ .checkmark {
+      background-color: #3b82f6;
+      border-color: #3b82f6;
+    }
+    
+    .checkmark:after {
+      content: "";
+      position: absolute;
+      display: none;
+    }
+    
+    .custom-checkbox input:checked ~ .checkmark:after {
+      display: block;
+      left: 6px;
+      top: 2px;
+      width: 5px;
+      height: 10px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+    
+    /* Кастомные числовые инпуты (без дефолтных стрелок) */
+    .number-input-container {
+      position: relative;
+      width: 100%;
+    }
+    
+    .number-input-container input[type="number"] {
+      width: 100%;
+      padding: 10px 44px 10px 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+    
+    .number-input-container input[type="number"]:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    
+    .number-input-buttons {
+      position: absolute;
+      right: 1px;
+      top: 1px;
+      bottom: 1px;
+      width: 36px;
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid #334155;
+      border-radius: 0 7px 7px 0;
+      overflow: hidden;
+    }
+    
+    .number-input-button {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #334155;
+      color: #cbd5e1;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .number-input-button:hover {
+      background: #475569;
+    }
+    
+    .number-input-button:active {
+      background: #1e293b;
+    }
+    
+    .number-input-button:first-child {
+      border-bottom: 1px solid #1e293b;
+    }
+    
+    /* Кастомные селекты */
+    .custom-select {
+      position: relative;
+      width: 100%;
+    }
+    
+    .custom-select select {
+      width: 100%;
+      padding: 10px 40px 10px 12px;
+      background: #1e293b url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat right 12px center;
+      background-size: 12px;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #f1f5f9;
+      font-size: 14px;
+      font-family: inherit;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      transition: all 0.2s ease;
+    }
+    
+    .custom-select select:hover {
+      border-color: #475569;
+    }
+    
+    .custom-select select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    
+    /* Кнопки */
+    .btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .btn-secondary {
+      background: #475569;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #334155;
+      transform: translateY(-1px);
+    }
+    
+    .btn-success {
+      background: #10b981;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background: #059669;
+    }
+    
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #dc2626;
+    }
+    
+    .btn-warning {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    .btn-warning:hover {
+      background: #d97706;
+    }
+    
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+    }
+    
+    .btn-ghost:hover {
+      background: #334155;
+      border-color: #64748b;
+    }
+    
+    /* Прогресс бар */
+    .progress-container {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    
+    .progress-bar {
+      height: 8px;
+      background: #334155;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      transition: width 0.3s ease;
+    }
+    
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    
+    /* Группы кнопок */
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    
+    /* Сетка для параметров */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    
+    /* Отступы и разделители */
+    .mt-4 { margin-top: 16px; }
+    .mb-4 { margin-bottom: 16px; }
+    .pt-4 { padding-top: 16px; }
+    .pb-4 { padding-bottom: 16px; }
+    .border-t { border-top: 1px solid #334155; }
+    .border-b { border-bottom: 1px solid #334155; }
+    
+    /* Текст */
+    .text-sm { font-size: 13px; }
+    .text-xs { font-size: 12px; }
+    .text-muted { color: #94a3b8; }
+    .text-center { text-align: center; }
+    
+    /* Утилиты */
+    .hidden { display: none; }
+    .block { display: block; }
+    .w-full { width: 100%; }
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-2 { gap: 8px; }
+    .gap-4 { gap: 16px; }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <!-- Хедер -->
+    <div class="header">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+            <!-- V2k Radio Decompiler — Clustering + NLP -->
+          </h1>
+          <p class="text-sm text-slate-400 mt-1" style="font-size: 30px;">Режим букв/слогов с кластеризацией и интерпретацией</p>
+        </div>
+        <button id="btnToggleSidebar" class="btn btn-ghost">
+          <span>⟷</span>
+          <span>Панель</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Прогресс бар -->
+    <div id="progress" class="progress-container hidden">
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+      </div>
+      <div class="progress-info">
+        <span id="progressPhase">—</span>
+        <div class="flex gap-4">
+          <span id="progressPct" class="font-medium text-blue-300">0%</span>
+          <span id="progressElapsed" class="text-slate-400">0.0s</span>
+          <span id="progressEta" class="text-slate-400">ETA —</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Основной контент -->
+    <div class="content-wrapper">
+      <!-- Левая панель (контролы) -->
+      <div class="left-panel">
+        <!-- 1) Источник сэмплов -->
+        <div class="glass-panel">
+          <h3 class="section-title section-1">1) Источник: WAV/MP3/FLAC/OGG</h3>
+          <div class="space-y-4">
+            <div class="btn-group">
+              <button id="btnRetryList" class="btn btn-secondary">Загрузить LIST.json</button>
+              <button id="btnLoadDemo" class="btn btn-primary">Демо-сэмплы</button>
+            </div>
+            
+            <div>
+              <label class="block text-sm text-slate-300 mb-2">Локальные файлы:</label>
+              <input id="fileInput" type="file" accept="audio/*" multiple class="input-dark" />
+              <!-- <p class="text-xs text-muted mt-1"></p> -->
+            </div>
+            
+            <div>
+              <label class="block text-sm text-slate-300 mb-2">URL <!--(по одному на строку)-->:</label>
+              <textarea id="urlList" rows="4" class="input-dark" placeholder="https://.../a.wav&#10;https://.../b.wav"></textarea>
+              <div class="btn-group">
+                <button id="btnLoadUrls" class="btn btn-primary">Загрузить URL</button>
+                <button id="btnClearList" class="btn btn-danger">Очистить список</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2) Выбор образца -->
+        <div class="glass-panel">
+          <h3 class="section-title section-2">2) Выбор образца</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm text-slate-300 mb-2">Выберите пример:</label>
+              <div class="custom-select">
+                <select id="sampleSelect"></select>
+              </div>
+            </div>
+            
+            <div class="btn-group">
+              <button id="btnPlay" class="btn btn-success">▶ Play</button>
+              <button id="btnStop" class="btn btn-danger">⏹ Stop</button>
+            </div>
+            <br>
+            <div id="sampleInfo" class="text-sm text-muted p-3 bg-slate-900/50 rounded-lg" style="padding: 15px;"></div>
+          </div>
+        </div>
+
+        <!-- 3) Параметры извлечения -->
+        <div class="glass-panel">
+          <h3 class="section-title section-3">3) Параметры извлечения</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm text-slate-300 mb-2">Частота дискретизации огибающих (точек/сек):</label>
+              <div class="number-input-container">
+                <input id="env_sr" type="number" value="120" min="20" max="2400" step="10" />
+                <div class="number-input-buttons">
+                  <button type="button" class="number-input-button" onclick="stepUp(this)">+</button>
+                  <button type="button" class="number-input-button" onclick="stepDown(this)">-</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <p class="text-sm text-slate-300 mb-3">Методы извлечения:</p>
+              <div class="space-y-2">
+                <label class="custom-checkbox">
+                  <input type="checkbox" id="use_rms" checked>
+                  <span class="checkmark"></span>
+                  <span class="ml-2 text-slate-300">RMS</span>
+                </label>
+                <label class="custom-checkbox">
+                  <input type="checkbox" id="use_centroid" checked>
+                  <span class="checkmark"></span>
+                  <span class="ml-2 text-slate-300">Spectral centroid</span>
+                </label>
+                <label class="custom-checkbox">
+                  <input type="checkbox" id="use_hilbert" checked>
+                  <span class="checkmark"></span>
+                  <span class="ml-2 text-slate-300">Hilbert</span>
+                </label>
+              </div>
+            </div>
+
+            <details>
+              <summary class="text-sm font-medium text-slate-300 cursor-pointer">Предобработка (новые алгоритмы)</summary>
+              <div class="space-y-4 mt-4 pt-4 border-t border-slate-800">
+                <div class="space-y-2">
+                  <label class="custom-checkbox">
+                    <input type="checkbox" id="pp_dc" checked>
+                    <span class="checkmark"></span>
+                    <span class="ml-2 text-slate-300">Удаление DC</span>
+                  </label>
+                  <label class="custom-checkbox">
+                    <input type="checkbox" id="pp_pre" checked>
+                    <span class="checkmark"></span>
+                    <span class="ml-2 text-slate-300">Преэмфазис 0.97</span>
+                  </label>
+                </div>
+
+                <div class="grid-2">
+                  <div>
+                    <label class="block text-xs text-muted mb-1">HP, Гц (спектр):</label>
+                    <div class="number-input-container">
+                      <input id="pp_hp" type="number" value="80" min="0" max="20000" step="10" />
+                      <div class="number-input-buttons">
+                        <button type="button" class="number-input-button" onclick="stepUp(this)">+</button>
+                        <button type="button" class="number-input-button" onclick="stepDown(this)">-</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-muted mb-1">LP, Гц (спектр):</label>
+                    <div class="number-input-container">
+                      <input id="pp_lp" type="number" value="4000" min="50" max="22050" step="10" />
+                      <div class="number-input-buttons">
+                        <button type="button" class="number-input-button" onclick="stepUp(this)">+</button>
+                        <button type="button" class="number-input-button" onclick="stepDown(this)">-</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="custom-checkbox">
+                    <input type="checkbox" id="pp_gate" checked>
+                    <span class="checkmark"></span>
+                    <span class="ml-2 text-slate-300">Noise-Gate</span>
+                  </label>
+                  
+                  <div class="grid-3 mt-3 pl-6">
+                    <div>
+                      <label class="block text-xs text-muted mb-1">Кадров «тишины»:</label>
+                      <div class="number-input-container">
+                        <input id="pp_gate_init" type="number" value="12" min="4" max="200" />
+                        <div class="number-input-buttons">
+                          <button type="button" class="number-input-button" onclick="stepUp(this)">+</button>
+                          <button type="button" class="number-input-button" onclick="stepDown(this)">-</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-xs text-muted mb-1">Порог × шум:</label>
+                      <div class="number-input-container">
+                        <input id="pp_gate_mul" type="number" value="1.8" min="1" max="6" step="0.1" />
+                        <div class="number-input-buttons">
+                          <button type="button" class="number-input-button" onclick="stepUp(this)">+</button>
+                          <button type="button" class="number-input-button" onclick="stepDown(this)">-</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-xs text-muted mb-1">Понижение, дБ:</label>
+                      <div class="number-input-container">
+                        <input id="pp_gate_red" type="number" value="18" min="3" max="60" step="1" />
+                        <div class="number-input-buttons">
+                          <button type="button" class="number-input-button" onclick="stepUp(this)">+</button>
+                          <button type="button" class="number-input-button" onclick="stepDown(this)">-</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="custom-checkbox">
+                    <input type="checkbox" id="pp_vad" checked>
+                    <span class="checkmark"></span>
+                    <span class="ml-2 text-slate-300">VAD (энергия+центроид)</span>
+                  </label>
+                  
+                  <div class="grid-2 mt-3 pl-6">
+                    <div>
+                      <label class="block text-xs text-muted mb-1">Порог энергии:</label>
+                      <div class="number-input-container">
+                        <input id="pp_vad_q" type="number" value="0.25" min="0.01" max="0.9" step="0.01" />
+                        <div class="number-input-buttons">
+                          <button type="button" class="number-input-button" onclick="stepUp(this)">+</button>
+                          <button type="button" class="number-input-button" onclick="stepDown(this)">-</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-xs text-muted mb-1">Порог центроида (Гц):</label>
+                      <div class="number-input-container">
+                        <input id="pp_vad_cf" type="number" value="250" min="50" max="2000" step="10" />
+                        <div class="number-input-buttons">
+                          <button type="button" class="number-input-button" onclick="stepUp(this)">+</button>
+                          <button type="button" class="number-input-button" onclick="stepDown(this)">-</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <!-- 4) Сопоставление -->
+        <div class="glass-panel">
+          <h3 class="section-title section-4">4) Сопоставление</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm text-slate-300 mb-2">DTW frames (фикс. длина):</label>
+              <div class="number-input-container">
+                <input id="dtw_len" type="number" value="96" min="16" max="512" />
+                <div class="number-input-buttons">
+                  <button type="button" class="number-input-button" onclick="stepUp(this)">+</button>
+                  <button type="button" class="number-input-button" onclick="stepDown(this)">-</button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="grid-2">
+              <div>
+                <label class="block text-sm text-slate-300 mb-2">TopK (L2-фильтр):</label>
+                <div class="number-input-container">
+                  <input id="topk" type="number" value="10" min="1" max="200" />
+                  <div class="number-input-buttons">
+                    <button type="button" class="number-input-button" onclick="stepUp(this)">+</button>
+                    <button type="button" class="number-input-button" onclick="stepDown(this)">-</button>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm text-slate-300 mb-2">Sakoe-Chiba, %:</label>
+                <div class="number-input-container">
+                  <input id="dtw_band" type="number" value="15" min="0" max="100" />
+                  <div class="number-input-buttons">
+                    <button type="button" class="number-input-button" onclick="stepUp(this)">+</button>
+                    <button type="button" class="number-input-button" onclick="stepDown(this)">-</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <label class="custom-checkbox">
+              <input type="checkbox" id="use_znorm" checked>
+              <span class="checkmark"></span>
+              <span class="ml-2 text-slate-300">z-norm</span>
+            </label>
+            
+            <div class="btn-group">
+              <button id="btnExtract" class="btn btn-primary">Извлечь огибающие</button>
+              <button id="btnMatch" class="btn btn-success">Сопоставить</button>
+              <button id="btnExport" class="btn btn-warning">Экспорт JSON</button>
+              <button id="btnSelfTest" class="btn btn-secondary">Self-test</button>
+            </div>
+            
+            <div id="log" class="text-sm text-muted p-3 bg-slate-900/50 rounded-lg mt-4" style="padding: 15px;">
+              Готов.
+            </div>
+          </div>
+        </div>
+
+        <!-- 5) Кластеризация образцов -->
+        <div class="glass-panel">
+          <h3 class="section-title section-5">5) Кластеризация образцов</h3>
+          <div class="space-y-4">
+            <div class="p-3 bg-slate-900/50 border border-slate-700 rounded-lg">
+              <p class="text-sm text-slate-300" style="padding: 15px;">
+                <strong>Анализ без библиотеки:</strong> группирует образцы по сходству признаков.
+              </p>
+            </div>
+            
+            <div>
+              <label class="block text-sm text-slate-300 mb-2">Макс. кластеров:</label>
+              <div class="number-input-container">
+                <input id="maxClusters" type="number" value="5" min="2" max="15" step="1" />
+                <div class="number-input-buttons">
+                  <button type="button" class="number-input-button" onclick="stepUp(this)">+</button>
+                  <button type="button" class="number-input-button" onclick="stepDown(this)">-</button>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <label class="block text-sm text-slate-300 mb-2">Метод определения k:</label>
+              <div class="custom-select">
+                <select id="clusterMethod">
+                  <option value="elbow">Метод локтя (авто)</option>
+                  <option value="fixed">Фиксированное число</option>
+                </select>
+              </div>
+            </div>
+            
+             <div class="btn-group">
+              <button id="btnExtractAll" class="btn btn-warning">Извлечь все</button>
+              <button id="btnCluster" class="btn btn-primary">Запуск кластеризации</button>
+              <button id="btnVisualizeClusters" class="btn btn-success">Визуализировать</button>
+            </div>
+            
+              <br>
+
+            <div class="p-3 bg-amber-900/10 border border-amber-800/30 rounded-lg">       
+              <p class="text-sm text-amber-300" style="padding: 15px;">
+                <strong>Требование:</strong> Сначала извлеките признаки для всех образцов!
+              </p>
+            </div>
+            
+            <div id="clusterResults" class="text-sm text-slate-300 space-y-3"></div>
+          </div>
+        </div>
+
+        <!-- 6) Интерпретация -->
+        <div class="glass-panel">
+          <h3 class="section-title section-6">6) Интерпретация</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm text-slate-300 mb-2">API Key:</label>
+              <input id="openaiKey" type="password" class="input-dark font-mono" placeholder="sk-..." />
+            </div>
+            
+            <div>
+              <label class="block text-sm text-slate-300 mb-2">Контекст:</label>
+              <textarea id="gptContext" rows="3" class="input-dark">Эти аудиозаписи получены в контексте исследования эффекта Фрея. Кластеры сформированы по акустическим признакам (огибающие RMS, спектральный центроид, огибающая Гильберта). Проанализируй возможную лингвистическую или сигнальную природу кластеров.</textarea>
+            </div>
+            
+            <div class="btn-group">
+              <button id="btnInterpretClusters" class="btn btn-success">Интерпретировать кластеры</button>
+              <button id="btnClearGPT" class="btn btn-danger">Очистить ответ</button>
+            </div>
+              <br>
+            <div id="gptResponse" class="hidden p-4 bg-slate-900/70 border border-slate-800 rounded-lg max-h-64 overflow-y-auto"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Правая панель (визуализация и результаты) -->
+      <div class="right-panel">
+        <!-- Панель визуализации -->
+        <div class="visualization-panel glass-panel">
+          <h3 class="section-title" style="color: #f1f5f9;">Визуализация «Эффекта Фрея»</h3>
+          <div class="visualization-content">
+            <div class="canvas-container">
+              <p class="text-sm text-muted mb-2">Волновая форма:</p>
+              <canvas id="waveCanvas" width="900" height="120"></canvas>
+            </div>
+            <div class="canvas-container">
+              <p class="text-sm text-muted mb-2">Огибающие:</p>
+              <canvas id="envCanvas" width="900" height="160"></canvas>
+            </div>
+            <div class="canvas-container">
+              <p class="text-sm text-muted mb-2">DTW матрица:</p>
+              <canvas id="dtwCanvas" width="900" height="220"></canvas>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Визуализация кластеров -->
+        <div id="clusterVizPanel" class="visualization-panel glass-panel hidden">
+          <h3 class="section-title" style="color: #f1f5f9;">Визуализация кластеров (2D проекция)</h3>
+          <div class="visualization-content">
+            <div class="canvas-container">
+              <canvas id="clusterCanvas" width="900" height="300"></canvas>
+            </div>
+            <div id="clusterLegend" class="flex flex-wrap gap-2 mt-4"></div>
+          </div>
+        </div>
+        
+        <!-- Панель результатов -->
+        <div class="results-panel glass-panel">
+          <h3 class="section-title" style="color: #f1f5f9;">Результаты</h3>
+          <div class="results-content" id="results">
+            Результаты появятся здесь.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script src="frey.js"></script>
+
+</body>
+</html>
