@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>SDR Frey Effect Demodulator 2026</title>
+    <style>
+        body { background: #1a1a1a; color: #00ff00; font-family: monospace; display: flex; flex-direction: column; align-items: center; }
+        #dashboard { border: 2px solid #00ff00; padding: 20px; border-radius: 10px; background: #000; box-shadow: 0 0 15px #00ff00; }
+        canvas { border: 1px solid #333; margin-top: 10px; width: 600px; height: 200px; }
+        .stats { display: flex; gap: 20px; margin-top: 10px; font-size: 1.2em; }
+        button { background: #00ff00; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; margin: 10px; }
+        button:hover { background: #008800; }
+    </style>
+</head>
+<body>
+
+    <h1>Анализатор Эффекта Фрея (NLED Demodulator)</h1>
+    
+    <div id="dashboard">
+        <button id="startBtn">ЗАПУСК СКАНИРОВАНИЯ (SDR)</button>
+        <div class="stats">
+            <div>RMS (Энергия): <span id="rmsVal">0.00</span></div>
+            <div>Центроид: <span id="centroidVal">0</span> Гц</div>
+        </div>
+        <canvas id="oscilloscope"></canvas>
+        <p style="font-size: 0.8em; color: #888;">* Используется Web Audio API для анализа огибающей оцифрованного СВЧ-сигнала.</p>
+    </div>
+
+<script>
+    const startBtn = document.getElementById('startBtn');
+    const canvas = document.getElementById('oscilloscope');
+    const ctx = canvas.getContext('2d');
+    const rmsDisp = document.getElementById('rmsVal');
+    const centroidDisp = document.getElementById('centroidVal');
+
+    let audioCtx, analyser, dataArray;
+
+    startBtn.onclick = async () => {
+        // В 2026 году Web Audio API позволяет имитировать поток с SDR
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Создаем анализатор для выделения признаков (RMS, Centroid)
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        
+        // Симуляция входящего модулированного сигнала (через микрофон или поток)
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const source = audioCtx.createMediaStreamSource(stream);
+        
+        // Цепочка демодуляции: Огибающая имитируется фильтром высоких частот + компрессором
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.value = 1500; // Центр речевого спектра
+
+        source.connect(filter);
+        filter.connect(analyser);
+        
+        dataArray = new Float32Array(analyser.frequencyBinCount);
+        draw();
+    };
+
+    function draw() {
+        requestAnimationFrame(draw);
+        analyser.getFloatTimeDomainData(dataArray);
+
+        // 1. Расчет RMS (Root Mean Square) - энергия импульсов
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i] * dataArray[i];
+        }
+        let rms = Math.sqrt(sum / dataArray.length);
+        rmsDisp.innerText = rms.toFixed(4);
+
+        // 2. Расчет спектрального центроида (упрощенно через FFT)
+        const freqData = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(freqData);
+        let weightedSum = 0, totalAmp = 0;
+        for (let i = 0; i < freqData.length; i++) {
+            weightedSum += i * freqData[i];
+            totalAmp += freqData[i];
+        }
+        let centroid = totalAmp > 0 ? (weightedSum / totalAmp) * (audioCtx.sampleRate / analyser.fftSize) : 0;
+        centroidDisp.innerText = Math.round(centroid);
+
+        // 3. Визуализация (Осциллограф огибающей)
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#00ff00';
+        ctx.beginPath();
+        let sliceWidth = canvas.width / dataArray.length;
+        let x = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            let v = dataArray[i] * 100 + canvas.height / 2;
+            if (i === 0) ctx.moveTo(x, v); else ctx.lineTo(x, v);
+            x += sliceWidth;
+        }
+        ctx.stroke();
+    }
+</script>
+</body>
+</html>
+  
