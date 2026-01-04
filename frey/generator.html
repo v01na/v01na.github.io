@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIO-RF ENCAPSULATOR | GOOGLE 2026</title>
+    <style>
+        :root { --neon: #ff003c; --bg: #050505; }
+        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; padding: 20px; text-align: center; }
+        .box { border: 1px solid var(--neon); padding: 20px; border-radius: 10px; background: #111; box-shadow: 0 0 15px rgba(255,0,60,0.2); }
+        .btn { background: var(--neon); color: #fff; border: none; padding: 15px; width: 100%; margin: 10px 0; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .btn:disabled { background: #444; color: #888; }
+        #wave-viz { width: 100%; height: 100px; background: #000; margin: 10px 0; border: 1px solid #333; }
+        .status { font-size: 0.8rem; margin: 10px 0; color: #aaa; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>BIO-RF ENCAPSULATOR</h2>
+    <p style="font-size: 0.7rem; color: #888;">Метод: Инкапсуляция речи в PRF-пакеты (Эффект Фрея)</p>
+    
+    <div class="status" id="status">IDLE: Ожидание записи голоса</div>
+    <canvas id="wave-viz"></canvas>
+
+    <button class="btn" id="recordBtn">Записать Речь (3 сек)</button>
+    <button class="btn" id="downloadBtn" disabled>Скачать Bio-RF Sample (.WAV)</button>
+    
+    <div style="text-align: left; font-size: 0.75rem; color: #666; margin-top: 15px;">
+        <strong>КАК ЭТО РАБОТАЕТ:</strong><br>
+        1. Вы записываете голос.<br>
+        2. Алгоритм берет вашу речь как <em>огибающую</em>.<br>
+        3. Речь умножается на частоту 1500 Гц (импульсы Фрея).<br>
+        4. Полученный файл — это то, что слышит мозг при СВЧ-атаке.
+    </div>
+</div>
+
+<script>
+    let audioCtx, recordedBuffer, encodedBlob;
+    const recordBtn = document.getElementById('recordBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const status = document.getElementById('status');
+
+    recordBtn.onclick = async () => {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        const chunks = [];
+
+        status.innerText = "RECORDING... ГОВОРИТЕ СЕЙЧАС";
+        recordBtn.disabled = true;
+
+        mediaRecorder.ondataavailable = e => chunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+            const blob = new Blob(chunks, { type: 'audio/wav' });
+            const arrayBuffer = await blob.arrayBuffer();
+            const sourceBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            
+            encodeFrey(sourceBuffer);
+        };
+
+        mediaRecorder.start();
+        setTimeout(() => mediaRecorder.stop(), 3000);
+    };
+
+    function encodeFrey(buffer) {
+        status.innerText = "ENCAPSULATING: Применение Bio-RF модуляции...";
+        const sampleRate = audioCtx.sampleRate;
+        const length = buffer.length;
+        const inputData = buffer.getChannelData(0);
+        
+        // Создаем новый буфер для Bio-RF сигнала
+        const outputBuffer = audioCtx.createBuffer(1, length, sampleRate);
+        const outputData = outputBuffer.getChannelData(0);
+        
+        const prf = 1500; // Частота следования импульсов
+
+        for (let i = 0; i < length; i++) {
+            const t = i / sampleRate;
+            // Генерируем меандр (импульсы)
+            const carrier = Math.sign(Math.sin(2 * Math.PI * prf * t));
+            // Инкапсулируем речь (inputData[i] выступает как огибающая)
+            outputData[i] = carrier * inputData[i]; 
+        }
+
+        createWavDownload(outputBuffer);
+    }
+
+    function createWavDownload(buffer) {
+        // Упрощенная конвертация в WAV для скачивания
+        const wavData = audioBufferToWav(buffer);
+        encodedBlob = new Blob([wavData], { type: 'audio/wav' });
+        const url = URL.createObjectURL(encodedBlob);
+        
+        downloadBtn.disabled = false;
+        downloadBtn.onclick = () => {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "frey_speech_sample_2026.wav";
+            a.click();
+            status.innerText = "FILE READY: Загрузите его в Демодулятор";
+        };
+        status.innerText = "ГОТОВО: Сигнал инкапсулирован";
+    }
+
+    // Вспомогательная функция для создания заголовка WAV (стандарт 2026)
+    function audioBufferToWav(buffer) {
+        const length = buffer.length * 2;
+        const result = new ArrayBuffer(44 + length);
+        const view = new DataView(result);
+        const samples = buffer.getChannelData(0);
+
+        const writeString = (offset, string) => {
+            for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+        };
+
+        writeString(0, 'RIFF');
+        view.setUint32(4, 36 + length, true);
+        writeString(8, 'WAVE');
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, buffer.sampleRate, true);
+        view.setUint32(28, buffer.sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        writeString(36, 'data');
+        view.setUint32(40, length, true);
+
+        let offset = 44;
+        for (let i = 0; i < samples.length; i++, offset += 2) {
+            let s = Math.max(-1, Math.min(1, samples[i]));
+            view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        }
+        return result;
+    }
+</script>
+</body>
+</html>
