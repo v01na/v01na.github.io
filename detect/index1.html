@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>FREY-RECON: Real-Time DSP Blueprint</title>
+    <style>
+        :root {
+            --bg: #050a0f;
+            --grid-color: rgba(0, 255, 255, 0.05);
+            --accent: #00f2ff;
+            --accent-dim: rgba(0, 242, 255, 0.3);
+            --warning: #ffcf00;
+            --text: #a0b0c0;
+            --panel-bg: rgba(10, 20, 30, 0.8);
+        }
+
+        body {
+            background-color: var(--bg);
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 30px 30px;
+            color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            margin: 0;
+            padding: 20px;
+            text-transform: uppercase;
+            overflow-x: hidden;
+        }
+
+        .header {
+            border-bottom: 2px solid var(--accent);
+            display: flex;
+            justify-content: space-between;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px -10px var(--accent-dim);
+        }
+
+        .status-blink {
+            color: var(--accent);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .container { display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--accent-dim);
+            padding: 15px;
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+
+        .panel::before {
+            content: ""; position: absolute; top: -2px; left: -2px;
+            width: 10px; height: 10px; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent);
+        }
+
+        h2 { color: var(--accent); font-size: 1.2rem; margin-top: 0; display: flex; align-items: center; }
+        h2::after { content: ""; flex: 1; height: 1px; background: var(--accent-dim); margin-left: 15px; }
+
+        /* Имитация графика */
+        .v-graph {
+            height: 150px;
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid #1a2a3a;
+            margin: 15px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pulse-wave {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: var(--accent);
+            top: 50%;
+            box-shadow: 0 0 15px var(--accent);
+            animation: pulse-anim 2s infinite linear;
+        }
+
+        @keyframes pulse-anim {
+            0% { transform: scaleY(1); opacity: 0.5; }
+            50% { transform: scaleY(20); opacity: 1; }
+            100% { transform: scaleY(1); opacity: 0.5; }
+        }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { text-align: left; color: var(--accent-dim); padding: 8px; border-bottom: 1px solid var(--accent-dim); }
+        td { padding: 8px; border-bottom: 1px dotted rgba(255,255,255,0.05); }
+
+        .spec-label { color: var(--warning); font-weight: bold; }
+
+        .fui-button {
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 10px;
+            width: 100%;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
+        .fui-button:hover { background: var(--accent-dim); }
+
+        .requirement-box {
+            border: 1px solid var(--warning);
+            padding: 10px;
+            margin-top: 20px;
+            background: rgba(255, 207, 0, 0.05);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com" rel="stylesheet">
+</head>
+<body>
+
+<div class="header">
+    <div>SYSTEM: FREY_EXTRACTOR_V2.6 // RF_TO_VOICE_DEMOD</div>
+    <div class="status-blink">● STREAMING I/Q DATA: ACTIVE</div>
+</div>
+
+<div class="container">
+    <div class="main-content">
+        
+        <div class="panel">
+            <h2>01. ТИРЫ ПРИЕМНОГО ОБОРУДОВАНИЯ (EQUIPMENT LAYERS)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>LEVEL</th>
+                        <th>HARDWARE</th>
+                        <th>SNR RATIO</th>
+                        <th>COST</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="color: #95a5a6;">[ALPHA]</td>
+                        <td>RTL-SDR V4 + LNA 0.1-3GHz</td>
+                        <td>LOW (8-BIT)</td>
+                        <td>~$150</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #3498db;">[BETA]</td>
+                        <td>SDRplay RSP1A / Airspy R2</td>
+                        <td>MID (12/14-BIT)</td>
+                        <td>~$450</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #9b59b6;">[GAMMA]</td>
+                        <td>HackRF One + PortaPack + Shielding</td>
+                        <td>HIGH (20MHz BW)</td>
+                        <td>~$1200</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #e74c3c;">[DELTA]</td>
+                        <td>Ettus USRP B210 (Lab Grade)</td>
+                        <td>ULTRA (FPGA DSP)</td>
+                        <td>$5000+</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="v-graph">
+                <div class="pulse-wave" style="top: 30%; animation-delay: 0.2s;"></div>
+                <div class="pulse-wave" style="top: 70%; animation-delay: 0.5s;"></div>
+                <div style="position:absolute; bottom:5px; left:10px; font-size:10px; color:var(--accent);">ENVELOPE CORRELATION: 0.842ms</div>
+            </div>
+        </div>
+
+        <div class="panel" style="margin-top:20px;">
+            <h2>02. МИНИМАЛЬНЫЕ ТРЕБОВАНИЯ К ВЫЧИСЛИТЕЛЮ (DSP HOST)</h2>
+            <p>Для обработки I/Q потока 2.4 MSPS и нейросетевой очистки речи:</p>
+            <table>
+                <tr><td class="spec-label">CPU</td><td>Intel i5/Ryzen 5 (11th gen+) / Apple M1+</td></tr>
+                <tr><td class="spec-label">RAM</td><td>16 GB DDR4/DDR5 (Минимум 4GB выделено под буфер SDR)</td></tr>
+                <tr><td class="spec-label">GPU</td><td>NVIDIA RTX 3060+ (Для ускорения CUDA/TensorRT при демодуляции)</td></tr>
+                <tr><td class="spec-label">IO</td><td>USB 3.0 / 3.1 (RTL-SDR v4 требует стабильного питания)</td></tr>
+                <tr><td class="spec-label">OS</td><td>Linux (Ubuntu 24.04+) или Windows 11 + WSL2</td></tr>
+            </table>
+        </div>
+
+    </div>
+
+    <div class="sidebar">
+        <div class="panel">
+            <h2>SIGNAL PROCS</h2>
+            <div style="font-size: 0.8rem;">
+                <div>> ENVELOPE DETECT: <span style="color:var(--accent);">ENABLED</span></div>
+                <div>> MFCC FEATURE EXT: <span style="color:var(--accent);">RUNNING</span></div>
+                <div>> NOISE FLOOR: -104 dBm</div>
+                <div class="v-graph" style="height:80px; margin:10px 0;">
+                    <div style="width:100%; height:100%; background: repeating-linear-gradient(90deg, transparent, transparent 5px, rgba(0,242,255,0.1) 5px, rgba(0,242,255,0.1) 10px);"></div>
+                </div>
+                <button class="fui-button">CALIBRATE BASELINE</button>
+            </div>
+        </div>
+
+        <div class="requirement-box">
+            <h2 style="color: var(--warning); border-bottom-color: var(--warning);">ИНФРАЗВУК (LFO)</h2>
+            <p style="font-size: 0.75rem;">Для фиксации волн 0.1-20Гц требуется 24-bit АЦП (Инструментальный усилитель) + пьезо-датчики высокой чувствительности.</p>
+        </div>
+
+        <div class="panel" style="margin-top:20px; border-color: #ff3300;">
+            <h2 style="color: #ff3300;">MIC CORRELATION</h2>
+            <p style="font-size: 0.75rem;">Вход: XLR Phantom 48V<br>Тип: Конденсаторный (до 40кГц)<br>Цель: Подавление ложных срабатываний через Cross-Correlation.</p>
+        </div>
+    </div>
+</div>
+
+<div style="margin-top: 20px; text-align: center; font-size: 0.7rem; color: var(--accent-dim);">
+    &copy; RF-ACOUSTIC ANALYTICS DIV. // NO CARRIER DETECTED
+</div>
+
+</body>
+</html>
