@@ -3,12 +3,10 @@ export class UI {
         this.app = app;
         this.listeners = {};
         
-        // Кэшируем элементы
         this.els = {
-            // Сайдбар
             sidebar: document.getElementById('sidebar'),
             btnToggle: document.getElementById('btnToggleSidebar'),
-
+            
             // Источники
             micBtn: document.getElementById('btnMicStart'),
             radioBtn: document.getElementById('btnStreamConnect'),
@@ -22,22 +20,17 @@ export class UI {
             eqHigh: document.getElementById('eq-high'),
             btnResetEQ: document.getElementById('btnResetEQ'),
             
-            // DSP / Демодуляция
+            // DSP
             btnExtract: document.getElementById('btnExtract'),
-            btnExtractAll: document.getElementById('btnExtractAll'),
+            btnMatch: document.getElementById('btnMatch'), // <--- Важно
             
-            // Анализ / AI
-            btnMatch: document.getElementById('btnMatch'),
-            btnCluster: document.getElementById('btnCluster'),
-            btnInterpret: document.getElementById('btnInterpretClusters'),
-            
-            // Текстовые поля
+            // Текст
             valGain: document.getElementById('val-gain'),
             valLow: document.getElementById('val-low'),
             valMid: document.getElementById('val-mid'),
             valHigh: document.getElementById('val-high'),
-            
             log: document.getElementById('log'),
+            results: document.getElementById('results'),
             micSelect: document.getElementById('micSelect'),
             liveInd: document.getElementById('liveIndicator')
         };
@@ -59,63 +52,59 @@ export class UI {
             mics.forEach(m => {
                 const opt = document.createElement('option');
                 opt.value = m.deviceId;
-                opt.text = m.label || `Mic ${sel.length+1}`;
+                opt.text = m.label || `Микрофон ${sel.length+1}`;
                 sel.appendChild(opt);
             });
         } catch(e){}
     }
 
     attachListeners() {
-        // --- 1. Логика Сайдбара (Плавное скрытие) ---
+        // Сайдбар
         if (this.els.btnToggle && this.els.sidebar) {
             this.els.btnToggle.addEventListener('click', (e) => {
-                e.stopPropagation(); // Чтобы клик не ушел дальше
+                e.stopPropagation();
                 this.els.sidebar.classList.toggle('collapsed');
-                // Принудительно вызываем resize, чтобы графики подстроились под новую ширину
                 setTimeout(() => window.dispatchEvent(new Event('resize')), 350);
             });
         }
 
-        // --- 2. Источники ---
+        // Кнопки источников
         this.els.playBtn?.addEventListener('click', () => this.trigger('play'));
+        this.els.stopBtns.forEach(b => b?.addEventListener('click', () => this.trigger('stop')));
+        
         this.els.micBtn?.addEventListener('click', () => this.trigger('mic-start', this.els.micSelect.value));
         this.els.radioBtn?.addEventListener('click', () => this.trigger('stream-start', document.getElementById('streamUrl').value));
-        
-        this.els.stopBtns.forEach(b => b?.addEventListener('click', () => this.trigger('stop'))); // Единая команда стоп
         
         const fInput = document.getElementById('fileInput');
         if(fInput) fInput.addEventListener('change', (e) => this.trigger('file-load', e.target.files));
 
-        // --- 3. DSP Кнопки (Демодуляция) ---
-        this.els.btnExtract?.addEventListener('click', () => this.trigger('extract-one'));
-        this.els.btnExtractAll?.addEventListener('click', () => this.trigger('extract-all'));
+        // DSP Кнопки
+        this.els.btnExtract?.addEventListener('click', () => {
+            console.log('[UI] Clicked Extract');
+            this.trigger('extract-one');
+        });
         
-        // --- 4. AI Кнопки ---
-        this.els.btnCluster?.addEventListener('click', () => this.trigger('cluster'));
-        this.els.btnInterpret?.addEventListener('click', () => this.trigger('interpret'));
+        this.els.btnMatch?.addEventListener('click', () => {
+            console.log('[UI] Clicked Match DTW');
+            this.trigger('match-dtw');
+        });
     }
 
     attachMixerListeners() {
         const update = () => {
-            const settings = {
+            const s = {
                 gain: parseFloat(this.els.mixGain.value),
                 low: parseFloat(this.els.eqLow.value),
                 mid: parseFloat(this.els.eqMid.value),
                 high: parseFloat(this.els.eqHigh.value)
             };
-            
-            this.els.valGain.textContent = settings.gain.toFixed(1);
-            this.els.valLow.textContent = settings.low;
-            this.els.valMid.textContent = settings.mid;
-            this.els.valHigh.textContent = settings.high;
-
-            this.trigger('mixer-change', settings);
+            this.els.valGain.textContent = s.gain.toFixed(1);
+            this.els.valLow.textContent = s.low;
+            this.els.valMid.textContent = s.mid;
+            this.els.valHigh.textContent = s.high;
+            this.trigger('mixer-change', s);
         };
-
-        [this.els.mixGain, this.els.eqLow, this.els.eqMid, this.els.eqHigh].forEach(el => {
-            el.addEventListener('input', update);
-        });
-
+        [this.els.mixGain, this.els.eqLow, this.els.eqMid, this.els.eqHigh].forEach(el => el.addEventListener('input', update));
         this.els.btnResetEQ.addEventListener('click', () => {
             this.els.mixGain.value = 1;
             this.els.eqLow.value = 0;
@@ -131,6 +120,13 @@ export class UI {
     }
 
     log(msg) { 
-        if(this.els.log) this.els.log.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`; 
+        if(this.els.log) {
+            this.els.log.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        }
+    }
+
+    // Вывод форматированного результата в большую консоль
+    printResult(text) {
+        if(this.els.results) this.els.results.textContent = text;
     }
 }
