@@ -1,51 +1,61 @@
 import { UI } from './ui.js';
 import { AudioEngine } from './audio-engine.js';
 import { Visualizer } from './visualization.js';
+import { DSP } from './dsp.js';
 
-// Глобальное состояние приложения
 const App = {
     ui: null,
     audio: null,
     viz: null,
+    dsp: null,
     
     async init() {
         console.log('[App] Initializing v4.5 Modular...');
         
-        // 1. Инициализация подсистем
         this.viz = new Visualizer();
         this.ui = new UI(this);
-        this.audio = new AudioEngine(this.viz); // Передаем визуализатор в аудио движок
+        this.dsp = new DSP(this);
+        
+        // Аудио движок должен знать о DSP для отправки данных
+        this.audio = new AudioEngine(this.viz, this.dsp); 
 
-        // 2. Привязка событий UI к логике
         this.bindEvents();
+        this.bindDSP();
 
-        // 3. Готовность
         this.ui.log('System Ready. Select input source.');
     },
 
     bindEvents() {
-        // Управление воспроизведением файлов
+        // Плеер
         this.ui.on('play', () => this.audio.playSelectedFile());
         this.ui.on('stop', () => this.audio.stop());
         
-        // Микрофон
-        this.ui.on('mic-start', async (deviceId) => {
-            await this.audio.startMicrophone(deviceId);
+        // Real-Time Inputs
+        this.ui.on('mic-start', async (devId) => {
+            await this.audio.startMicrophone(devId);
             this.ui.setLiveState(true);
         });
-
-        // Радио
         this.ui.on('stream-start', async (url) => {
             await this.audio.startStream(url);
             this.ui.setLiveState(true);
         });
-
         this.ui.on('stop-live', () => {
             this.audio.stop();
             this.ui.setLiveState(false);
         });
+
+        // Файлы
+        this.ui.on('file-load', (files) => this.handleFiles(files));
+    },
+
+    bindDSP() {
+        // Когда DSP присылает данные реального времени
+        this.dsp.onRealTimeData = (metrics) => {
+            // metrics = { rms, centroid, hilbertPeak }
+            // Обновляем UI или графики огибающих
+            this.viz.drawRealTimeMetrics(metrics);
+        };
     }
 };
 
-// Запуск при загрузке
 document.addEventListener('DOMContentLoaded', () => App.init());
