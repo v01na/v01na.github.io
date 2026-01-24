@@ -10,107 +10,95 @@ const App = {
     dsp: null,
     
     async init() {
-        console.log('[App] Initializing v4.5 Modular...');
+        console.log('[App] Initializing v4.5 Final...');
         
-        // 1. Инициализация всех модулей
         this.viz = new Visualizer();
         this.ui = new UI(this);
         this.dsp = new DSP(this);
         
-        // Передаем viz и dsp в аудио-движок, чтобы он мог рисовать и считать
+        // Аудио движок получает доступ к Визуализатору и DSP
         this.audio = new AudioEngine(this.viz, this.dsp); 
 
-        // 2. Настройка связей
         this.bindEvents();
         this.bindDSP();
 
         this.ui.log('System Ready. Select input source.');
     },
 
-    // Связываем события интерфейса с логикой
     bindEvents() {
-        // --- Плеер (для файлов) ---
+        // --- Управление Файлами ---
         this.ui.on('play', () => {
-            // Здесь можно добавить логику воспроизведения загруженного буфера
-            this.ui.log('Play functionality for files requires AudioBufferSource implementation in AudioEngine');
+            this.ui.log('Starting playback...');
+            this.audio.playCurrentBuffer();
         });
         
         this.ui.on('stop', () => {
             this.audio.stop();
             this.ui.setLiveState(false);
+            this.ui.log('Stopped.');
         });
         
-        // --- Микрофон (Real-Time) ---
+        this.ui.on('file-load', (files) => this.handleFiles(files));
+
+        // --- Управление Real-Time ---
         this.ui.on('mic-start', async (deviceId) => {
+            this.ui.log('Initializing microphone...');
             await this.audio.startMicrophone(deviceId);
             this.ui.setLiveState(true);
-            this.ui.log('Microphone capture started');
         });
 
-        // --- Радио (Real-Time) ---
         this.ui.on('stream-start', async (url) => {
+            this.ui.log(`Connecting to stream: ${url}`);
             await this.audio.startStream(url);
             this.ui.setLiveState(true);
-            this.ui.log('Radio stream connecting...');
         });
 
         this.ui.on('stop-live', () => {
             this.audio.stop();
             this.ui.setLiveState(false);
-            this.ui.log('Stopped');
+            this.ui.log('Live input stopped.');
         });
-
-        // --- Загрузка файлов ---
-        this.ui.on('file-load', (files) => this.handleFiles(files));
     },
 
-    // Связываем обратные вызовы от DSP (результаты анализа)
     bindDSP() {
-        // Данные реального времени (RMS, Centroid, Peak)
+        // Обновление графиков метрик (RMS/Centroid) из Worker'а
         this.dsp.onRealTimeData = (metrics) => {
-            // metrics = { rms, centroid, hilbertPeak }
-            // Рисуем цветные графики внизу
-            if (this.viz.drawRealTimeMetrics) {
+            if (this.viz && this.viz.drawRealTimeMetrics) {
                 this.viz.drawRealTimeMetrics(metrics);
             }
         };
 
-        // Результат полного анализа файла
+        // Завершение полного анализа файла
         this.dsp.onFileAnalysisDone = (result, id) => {
-            this.ui.log(`Analysis done for: ${id}. Frames: ${result.frames}`);
-            // Здесь в будущем можно рисовать детальные огибающие
-            // this.viz.drawFullEnvelopes(result);
+            this.ui.log(`Analysis complete for: ${id}. Frames: ${result.frames}`);
+            // Здесь можно добавить код для детальной отрисовки результата
         };
     },
 
-    // Обработчик загрузки файлов
     async handleFiles(fileList) {
         if (!fileList || fileList.length === 0) return;
 
-        this.ui.log(`Processing ${fileList.length} files...`);
-        
-        const file = fileList[0]; // Пока берем первый
+        const file = fileList[0];
         try {
-            // 1. Декодируем
-            this.ui.log(`Decoding ${file.name}...`);
+            this.ui.log(`Loading ${file.name}...`);
+            
+            // 1. Загрузка и декодирование (теперь сохраняется внутри audio)
             const buffer = await this.audio.loadFile(file);
             
-            // 2. Рисуем волну (превью)
-            // Берем немного данных из середины для визуализации
+            this.ui.log(`Loaded ${file.name} (${buffer.duration.toFixed(2)}s). Ready to Play.`);
+            
+            // 2. Рисуем превью волны
             const rawData = buffer.getChannelData(0); 
             const previewLen = 2048;
             const step = Math.floor(rawData.length / previewLen);
             const view = new Uint8Array(previewLen);
-            
             for(let i=0; i<previewLen; i++) {
-                // Конвертация float (-1..1) в byte (0..255)
                 const val = rawData[i * step] || 0;
                 view[i] = (val + 1) * 128;
             }
             this.viz.drawWaveform(view);
 
-            // 3. Отправляем на полный анализ в Worker
-            this.ui.log(`Analyzing ${file.name}...`);
+            // 3. Запускаем глубокий анализ в фоне
             this.dsp.analyzeFullFile(buffer, file.name);
             
         } catch (e) {
@@ -119,3 +107,5 @@ const App = {
         }
     }
 };
+
+document.addEventListener('DOMContentLoaded', () => App.init());
