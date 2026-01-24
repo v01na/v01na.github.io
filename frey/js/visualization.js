@@ -8,12 +8,21 @@ export class Visualizer {
         
         this.dtwCanvas = document.getElementById('dtwCanvas');
         this.dtwCtx = this.dtwCanvas.getContext('2d');
+        
+        this.clusterCanvas = document.getElementById('clusterCanvas');
+        this.clusterCtx = this.clusterCanvas ? this.clusterCanvas.getContext('2d') : null;
 
         this.metricsHistory = []; 
         this.maxHistory = 300;
+        
+        // Обработчик ресайза окна для перерисовки (опционально)
+        window.addEventListener('resize', () => {
+            // Логика обновления размеров канвасов при изменении ширины сайдбара
+            // Здесь можно добавить код для fitToContainer
+        });
     }
 
-    // --- REAL-TIME GRAPHICS ---
+    // --- 1. REAL-TIME ---
     drawWaveform(byteData) {
         const w = this.waveCanvas.width, h = this.waveCanvas.height;
         this.waveCtx.fillStyle = '#020617'; 
@@ -21,9 +30,7 @@ export class Visualizer {
         this.waveCtx.lineWidth = 1.5; 
         this.waveCtx.strokeStyle = '#3b82f6'; 
         this.waveCtx.beginPath();
-        
-        const slice = w / byteData.length; 
-        let x = 0;
+        const slice = w / byteData.length; let x = 0;
         for (let i = 0; i < byteData.length; i++) {
             const y = (byteData[i] / 128.0) * h / 2;
             i===0 ? this.waveCtx.moveTo(x, y) : this.waveCtx.lineTo(x, y);
@@ -41,16 +48,13 @@ export class Visualizer {
         this.envCtx.fillStyle='#0f172a'; 
         this.envCtx.fillRect(0,0,w,h);
         
-        // RMS = Синий, Центроид = Зеленый
         this.drawPath(this.metricsHistory.map(x=>x.rms*4), '#3b82f6', h, w);
         this.drawPath(this.metricsHistory.map(x=>x.centroid/5000), '#10b981', h, w);
     }
 
     drawPath(data, color, h, w) {
         const step = w / this.maxHistory;
-        this.envCtx.beginPath(); 
-        this.envCtx.strokeStyle = color; 
-        this.envCtx.lineWidth = 2;
+        this.envCtx.beginPath(); this.envCtx.strokeStyle = color; this.envCtx.lineWidth = 2;
         for(let i=0;i<data.length;i++){
             const y = h - (Math.min(1, data[i]) * (h-10)) - 5;
             i===0?this.envCtx.moveTo(i*step, y):this.envCtx.lineTo(i*step, y);
@@ -58,49 +62,50 @@ export class Visualizer {
         this.envCtx.stroke();
     }
 
-    // --- STATIC ANALYSIS RESULTS ---
+    // --- 2. ПОДРОБНЫЕ ОГИБАЮЩИЕ ---
     drawFullEnvelopes(res) {
         const w = this.envCanvas.width, h = this.envCanvas.height;
         this.envCtx.fillStyle = '#0f172a'; 
         this.envCtx.fillRect(0,0,w,h);
         
-        // Функция ресемплинга (усреднение) для отрисовки длинного файла на экране
-        const fit = (arr) => {
-            const out = new Float32Array(w);
-            const step = arr.length / w;
-            for(let i=0;i<w;i++) {
-                // Max-pooling для сохранения пиков
-                let max = 0;
-                const start = Math.floor(i*step);
-                const end = Math.floor((i+1)*step);
-                for(let k=start; k<end; k++) if(arr[k]>max) max=arr[k];
-                out[i] = max;
+        // Метод отрисовки с сохранением пиков (Min-Max)
+        // Это делает график "лохматым" и подробным, а не сглаженным
+        const drawDetailed = (data, color) => {
+            this.envCtx.fillStyle = color;
+            this.envCtx.strokeStyle = color;
+            const step = Math.max(1, Math.floor(data.length / w));
+            
+            this.envCtx.beginPath();
+            for (let x = 0; x < w; x++) {
+                // Находим мин и макс в диапазоне, который соответствует этому пикселю
+                let min = 1.0, max = 0.0;
+                const start = x * step;
+                const end = Math.min((x + 1) * step, data.length);
+                
+                for (let i = start; i < end; i++) {
+                    if (data[i] < min) min = data[i];
+                    if (data[i] > max) max = data[i];
+                }
+                
+                // Рисуем вертикальную линию от мин до макс
+                const yMax = h - (max * (h - 20)) - 10;
+                const yMin = h - (min * (h - 20)) - 10;
+                
+                this.envCtx.moveTo(x, yMin);
+                this.envCtx.lineTo(x, yMax);
             }
-            return out;
+            this.envCtx.stroke();
         };
 
-        if(res.rms) this.drawStaticPath(fit(res.rms), '#3b82f6', h);
-        if(res.cent) this.drawStaticPath(fit(res.cent), '#10b981', h);
-        if(res.hilb) this.drawStaticPath(fit(res.hilb), '#ef4444', h);
+        if(res.rms) drawDetailed(res.rms, '#3b82f6'); // RMS (Синий)
+        if(res.hilb) drawDetailed(res.hilb, 'rgba(239, 68, 68, 0.7)'); // Hilbert (Красный, полупрозрачный)
     }
 
-    drawStaticPath(data, color, h) {
-        this.envCtx.beginPath(); 
-        this.envCtx.strokeStyle = color; 
-        this.envCtx.lineWidth = 1;
-        for(let i=0; i<data.length; i++) {
-            const y = h - (data[i] * (h-20)) - 10;
-            i===0?this.envCtx.moveTo(i, y):this.envCtx.lineTo(i, y);
-        }
-        this.envCtx.stroke();
-    }
-
-    // --- DTW HEATMAP ---
+    // --- 3. МАТРИЦА ---
     drawDTWMatrix(matrixData) {
         const { matrix, rows, cols } = matrixData;
         const w = this.dtwCanvas.width, h = this.dtwCanvas.height;
-        this.dtwCtx.fillStyle = '#000'; 
-        this.dtwCtx.fillRect(0,0,w,h);
+        this.dtwCtx.fillStyle = '#000'; this.dtwCtx.fillRect(0,0,w,h);
         
         const img = this.dtwCtx.createImageData(w, h);
         const d = img.data;
@@ -109,17 +114,52 @@ export class Visualizer {
             for (let x = 0; x < w; x++) {
                 const my = Math.floor((y / h) * rows);
                 const mx = Math.floor((x / w) * cols);
-                
-                // Инверсия: 0=Похоже (Темно), 1=Не похоже (Светло) -> меняем на 1=Похоже (Ярко)
                 const val = 1.0 - (matrix[my * cols + mx] || 0);
-                
                 const i = (y * w + x) * 4;
-                d[i]   = val * 255;       // R
-                d[i+1] = val * 100;       // G
-                d[i+2] = val * 50;        // B
-                d[i+3] = 255;             // Alpha
+                d[i] = val*255; d[i+1] = val*100; d[i+2] = val*50; d[i+3] = 255;
             }
         }
         this.dtwCtx.putImageData(img, 0, 0);
+    }
+
+    // --- 4. КЛАСТЕРЫ (2D MAP) ---
+    drawClusters(data) {
+        // data: { assignments: [], centroids: [], points: [[x,y],...] }
+        if (!this.clusterCanvas || !data.points) return;
+        
+        // Показываем панель кластеров
+        const panel = document.getElementById('clusterVizPanel');
+        if (panel) panel.classList.remove('hidden');
+
+        const ctx = this.clusterCtx;
+        const w = this.clusterCanvas.width;
+        const h = this.clusterCanvas.height;
+        
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, 0, w, h);
+
+        // Цвета кластеров
+        const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+
+        // Рисуем точки
+        data.points.forEach((pt, i) => {
+            const clusterId = data.assignments[i];
+            const color = colors[clusterId % colors.length];
+            
+            // Нормализация координат 0..1 -> canvas
+            const x = pt[0] * w;
+            const y = h - (pt[1] * h); // Y перевернут
+
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+        });
+        
+        // Легенда
+        const legend = document.getElementById('clusterLegend');
+        if(legend) {
+            legend.innerHTML = `Найдено ${data.centroids.length} кластеров`;
+        }
     }
 }
