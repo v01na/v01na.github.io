@@ -1,79 +1,40 @@
 export class DSP {
     constructor(app) {
         this.app = app;
-        
-        // Запускаем воркер (убедитесь, что путь верный)
         this.worker = new Worker('js/workers/dsp-worker.js');
-        
-        // Инициализация
         this.worker.postMessage({ type: 'init' });
         
-        // Прием сообщений от воркера
-        this.worker.onmessage = (e) => this.handleMessage(e.data);
-        
-        // Callbacks для внешнего мира
+        this.worker.onmessage = (e) => {
+            const msg = e.data;
+            if(msg.type === 'chunk-result' && this.onRealTimeData) this.onRealTimeData(msg.result);
+            if(msg.type === 'file-result' && this.onFileAnalysisDone) this.onFileAnalysisDone(msg.result, msg.id);
+            if(msg.type === 'dtw-result' && this.onDTWMatrixReady) this.onDTWMatrixReady(msg.matrix);
+            if(msg.type === 'error') {
+                console.error(msg.error);
+                if(this.app.ui) this.app.ui.log('DSP Error: ' + msg.error);
+            }
+        };
+
         this.onRealTimeData = null; 
         this.onFileAnalysisDone = null;
+        this.onDTWMatrixReady = null;
     }
 
-    handleMessage(msg) {
-        switch (msg.type) {
-            case 'chunk-result':
-                // Пришли быстрые метрики (RMS/Centroid) из потока
-                if (this.onRealTimeData) {
-                    this.onRealTimeData(msg.result);
-                }
-                break;
-                
-            case 'file-result':
-                // Пришел полный анализ файла
-                if (this.onFileAnalysisDone) {
-                    this.onFileAnalysisDone(msg.result, msg.id);
-                }
-                break;
-                
-            case 'error':
-                console.error('[DSP Worker Error]', msg.error);
-                break;
-                
-            case 'ready':
-                console.log('[DSP] Worker ready');
-                break;
-        }
+    processRealTime(data, sr) {
+        this.worker.postMessage({ type: 'process-chunk', payload: { data, config: {sampleRate: sr}} });
     }
 
-    // Метод для отправки "сырых" данных потока (Real-Time)
-    processRealTime(floatData, sampleRate) {
-        // floatData - это Float32Array. 
-        // При postMessage данные копируются (Structured Clone), это безопасно.
-        this.worker.postMessage({
-            type: 'process-chunk',
-            payload: {
-                data: floatData,
-                config: { sampleRate: sampleRate }
-            }
-        });
-    }
-
-    // Метод для полного анализа файла
-    analyzeFullFile(audioBuffer, id) {
-        // Берем данные первого канала (моно)
-        const channelData = audioBuffer.getChannelData(0);
-        
-        // Определяем частоту дискретизации огибающей из UI (или дефолт)
-        const envSrInput = document.getElementById('env_sr');
-        const envSr = envSrInput ? parseInt(envSrInput.value) : 120;
-
+    analyzeFullFile(buffer, id) {
+        const sr = buffer.sampleRate;
+        const data = buffer.getChannelData(0);
+        // Отправляем
         this.worker.postMessage({
             type: 'analyze-file',
-            payload: {
-                buffer: channelData, // Большой массив
-                sr: audioBuffer.sampleRate,
-                id: id,
-                config: {
-                    envSr: envSr
-                }
-            }
+            payload: { buffer: data, sr: sr, id: id, config: { envSr: 120 } }
         });
+    }
+
+    runDTW() {
+        this.worker.postMessage({ type: 'run-dtw' });
     }
 }
