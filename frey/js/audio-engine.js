@@ -2,40 +2,50 @@
 class ChannelStrip {
     constructor(ctx, analyser, destination) {
         this.ctx = ctx;
-        this.analyser = analyser;
-        this.destination = destination;
+        this.analyser = analyser;     // Общая шина анализа
+        this.destination = destination; // Выход (колонки) - может быть null
 
-        // Эквалайзер (3 полосы)
-        this.lowShelf = ctx.createBiquadFilter(); this.lowShelf.type = 'lowshelf'; this.lowShelf.frequency.value = 150;
-        this.midPeak = ctx.createBiquadFilter(); this.midPeak.type = 'peaking'; this.midPeak.frequency.value = 1000;
-        this.highShelf = ctx.createBiquadFilter(); this.highShelf.type = 'highshelf'; this.highShelf.frequency.value = 8000;
+        // --- EQ Section ---
+        this.lowShelf = ctx.createBiquadFilter();
+        this.lowShelf.type = 'lowshelf';
+        this.lowShelf.frequency.value = 150; 
 
-        // Громкость
+        this.midPeak = ctx.createBiquadFilter();
+        this.midPeak.type = 'peaking';
+        this.midPeak.frequency.value = 1000;
+        this.midPeak.Q.value = 1;
+
+        this.highShelf = ctx.createBiquadFilter();
+        this.highShelf.type = 'highshelf';
+        this.highShelf.frequency.value = 8000;
+
+        // --- Gain Section ---
         this.gainNode = ctx.createGain();
         this.gainNode.gain.value = 1.0;
 
-        // Цепь: Input -> Low -> Mid -> High -> Gain
+        // Цепочка: Input -> Low -> Mid -> High -> Gain
         this.lowShelf.connect(this.midPeak);
         this.midPeak.connect(this.highShelf);
         this.highShelf.connect(this.gainNode);
         
-        // Output маршрутизация: Gain подключается к Анализатору ВСЕГДА
+        // --- Output Routing ---
+        // 1. Всегда отправляем в Анализатор
         this.gainNode.connect(this.analyser);
         
-        // Output маршрутизация: Gain подключается к Колонкам, ЕСЛИ destination передан
+        // 2. Отправляем в Колонки, только если это не микрофон
         if (this.destination) {
             this.gainNode.connect(this.destination);
         }
 
+        // Входная точка
         this.inputPoint = this.lowShelf;
         this.currentSource = null;
     }
 
     connectInput(sourceNode) {
-        // Если что-то уже играло на этом канале, отключаем
-        if (this.currentSource) {
-            try { this.currentSource.disconnect(); } catch(e){}
-        }
+        // Отключаем старый источник, если был
+        this.disconnect();
+        
         this.currentSource = sourceNode;
         sourceNode.connect(this.inputPoint);
     }
@@ -48,11 +58,14 @@ class ChannelStrip {
     }
 
     setEQ(low, mid, high) {
+        // Значения в dB
         this.lowShelf.gain.value = low;
         this.midPeak.gain.value = mid;
         this.highShelf.gain.value = high;
     }
+
     setVolume(val) {
+        // Плавное изменение громкости (защита от щелчков)
         this.gainNode.gain.setTargetAtTime(val, this.ctx.currentTime, 0.05);
     }
 }
@@ -64,7 +77,7 @@ export class AudioEngine {
         this.viz = visualizer;
         this.dsp = dsp;
 
-        // Анализатор (общая шина для визуализации и DSP)
+        // Мастер-анализатор
         this.analyser = this.ctx.createAnalyser();
         this.analyser.fftSize = 2048;
         this.analyser.smoothingTimeConstant = 0.2;
@@ -72,30 +85,32 @@ export class AudioEngine {
         this.byteData = new Uint8Array(this.analyser.frequencyBinCount);
         this.floatData = new Float32Array(this.analyser.fftSize);
 
-        // --- СОЗДАНИЕ КАНАЛОВ ---
-        // Файл и Радио идут в колонки (this.ctx.destination)
-        // Микрофон НЕ идет в колонки (null), чтобы избежать фидбека
+        // --- Каналы Микшера ---
         this.channels = {
+            // Файл и Радио слышно в колонках
             file: new ChannelStrip(this.ctx, this.analyser, this.ctx.destination),
             radio: new ChannelStrip(this.ctx, this.analyser, this.ctx.destination),
+            // Микрофон НЕ слышно в колонках (мониторинг через графики)
             mic: new ChannelStrip(this.ctx, this.analyser, null) 
         };
 
         this.currentBuffer = null;
         this.isLive = false;
         this.animationId = null;
+        
+        // Ссылка на HTML Audio для радио
+        this._radioElement = document.getElementById('streamPlayer');
     }
 
-    // --- ОБНОВЛЕНИЕ МИКШЕРА ---
+    // Обновление параметров всех каналов
     updateMixer(settings) {
-        // Применяем настройки ко всем каналам (можно сделать раздельно в будущем)
         Object.values(this.channels).forEach(ch => {
             ch.setVolume(settings.gain);
             ch.setEQ(settings.low, settings.mid, settings.high);
         });
     }
 
-    // --- 1. ФАЙЛЫ ---
+    // --- 1. Файлы ---
     async loadFile(file) {
         if (this.ctx.state === 'suspended') await this.ctx.resume();
         const ab = await file.arrayBuffer();
@@ -106,7 +121,7 @@ export class AudioEngine {
     playCurrentBuffer() {
         if (!this.currentBuffer) return alert('Файл не загружен');
         
-        // НЕ останавливаем всё (this.stop()), останавливаем только предыдущий файл
+        // Перезапуск канала файла
         this.channels.file.disconnect();
 
         const source = this.ctx.createBufferSource();
@@ -118,47 +133,35 @@ export class AudioEngine {
         source.start(0);
 
         this.startEngineLoop();
-        console.log('[Audio] Файл запущен');
-    }
-    
-    stopFile() {
-        this.channels.file.disconnect();
     }
 
-    // --- 2. РАДИО ---
+    // --- 2. Радио ---
     async startStream(url) {
         if (this.ctx.state === 'suspended') await this.ctx.resume();
         
-        // Не стопаем всё, только предыдущее радио
         this.channels.radio.disconnect();
 
-        const audioEl = document.getElementById('streamPlayer');
-        audioEl.src = url;
-        audioEl.crossOrigin = "anonymous";
+        if (!this._radioElement) return console.error('No stream player found');
+        
+        this._radioElement.src = url;
+        this._radioElement.crossOrigin = "anonymous";
 
         try {
-            await audioEl.play();
-            // Создаем MediaElementSource (осторожно, его можно создать только раз для одного тега)
+            await this._radioElement.play();
+            
+            // MediaElementSource создается 1 раз для тега
             if (!this._streamNode) {
-                 this._streamNode = this.ctx.createMediaElementSource(audioEl);
+                 this._streamNode = this.ctx.createMediaElementSource(this._radioElement);
             }
             
             this.channels.radio.connectInput(this._streamNode);
-            
             this.startEngineLoop();
-            console.log('[Audio] Радио запущено');
         } catch (e) {
             alert('Ошибка потока: ' + e.message);
         }
     }
-    
-    stopRadio() {
-        const audioEl = document.getElementById('streamPlayer');
-        audioEl.pause();
-        this.channels.radio.disconnect();
-    }
 
-    // --- 3. МИКРОФОН ---
+    // --- 3. Микрофон ---
     async startMicrophone(deviceId) {
         if (this.ctx.state === 'suspended') await this.ctx.resume();
         
@@ -166,30 +169,31 @@ export class AudioEngine {
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                audio: { deviceId: deviceId ? { exact: deviceId } : undefined, echoCancellation: false }
+                audio: { 
+                    deviceId: deviceId ? { exact: deviceId } : undefined, 
+                    echoCancellation: false,
+                    autoGainControl: false,
+                    noiseSuppression: false
+                }
             });
             const source = this.ctx.createMediaStreamSource(stream);
-            
             this.channels.mic.connectInput(source);
-            
             this.startEngineLoop();
-            console.log('[Audio] Микрофон запущен');
         } catch (e) { alert('Ошибка микр: ' + e.message); }
     }
-    
-    stopMic() {
-        this.channels.mic.disconnect();
-        // В идеале нужно стопить треки стрима, но source node у нас локальный в connectInput
-        // Упрощение: просто отключаем от микшера
-    }
 
-    // --- ОБЩЕЕ ---
-    
+    // --- Управление ---
     stop() {
-        // Полная остановка всего
-        this.stopFile();
-        this.stopRadio();
-        this.stopMic();
+        // Останавливаем всё
+        this.channels.file.disconnect();
+        this.channels.radio.disconnect();
+        this.channels.mic.disconnect();
+        
+        if(this._radioElement) {
+            this._radioElement.pause();
+            this._radioElement.src = "";
+        }
+        
         this.isLive = false;
         cancelAnimationFrame(this.animationId);
     }
@@ -204,13 +208,13 @@ export class AudioEngine {
     loop() {
         if (!this.isLive) return;
 
-        // Визуализация
+        // 1. Данные для визуализации
         if (this.viz) {
             this.analyser.getByteTimeDomainData(this.byteData);
             this.viz.drawWaveform(this.byteData);
         }
 
-        // DSP
+        // 2. Данные для DSP
         if (this.dsp) {
             this.analyser.getFloatTimeDomainData(this.floatData);
             this.dsp.processRealTime(this.floatData, this.ctx.sampleRate);
