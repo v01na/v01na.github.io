@@ -10,126 +10,98 @@ const App = {
     dsp: null,
     
     async init() {
-        console.log('[App] Initializing v5.0 Mixer Edition...');
+        console.log('[App] V2k Demodulator v5.3 Rus...');
         
-        // 1. Инициализация подсистем
         this.viz = new Visualizer();
         this.ui = new UI(this);
         this.dsp = new DSP(this);
-        
-        // Аудио движок связывает всё: Визуал, Математику и Микшер
         this.audio = new AudioEngine(this.viz, this.dsp); 
 
-        // 2. Настройка событий
         this.bindEvents();
         this.bindDSP();
 
-        this.ui.log('System Ready. Select Source & Adjust EQ.');
+        this.ui.log('Система готова. Выберите источник.');
     },
 
     bindEvents() {
-        // --- Плеер (Файлы) ---
+        // --- Файлы ---
         this.ui.on('play', () => {
-            this.ui.log('Starting file playback...');
+            this.ui.log('Запуск воспроизведения файла...');
             this.audio.playCurrentBuffer();
         });
         
-        this.ui.on('stop', () => {
-            this.stopAll();
-        });
+        // Stop All
+        this.ui.on('stop', () => { this.stopAll(); });
+        this.ui.on('stop-live', () => { this.stopAll(); }); // Для кнопок радио/мик
 
-        this.ui.on('stop-live', () => {
-            this.stopAll();
-        });
-
-        // --- Микрофон (Real-Time) ---
+        // --- Микрофон ---
         this.ui.on('mic-start', async (deviceId) => {
-            this.ui.log('Initializing microphone...');
+            this.ui.log('Инициализация микрофона...');
             await this.audio.startMicrophone(deviceId);
             this.ui.setLiveState(true);
         });
 
-        // --- Радио (Real-Time) ---
+        // --- Радио ---
         this.ui.on('stream-start', async (url) => {
-            if (!url) return alert('Enter Stream URL');
-            this.ui.log(`Connecting to stream...`);
+            if (!url) return alert('Введите URL потока');
+            this.ui.log(`Подключение к потоку...`);
             await this.audio.startStream(url);
             this.ui.setLiveState(true);
         });
 
-        // --- Загрузка Файлов ---
+        // --- Загрузка ---
         this.ui.on('file-load', (files) => this.handleFiles(files));
 
-        // --- Микшер и Эквалайзер (NEW) ---
+        // --- Микшер ---
         this.ui.on('mixer-change', (settings) => {
-            // settings = { gain, low, mid, high }
-            // Передаем настройки в аудио-движок
             this.audio.updateMixer(settings);
-            
-            // Логирование только при сильных изменениях, чтобы не спамить
-            // this.ui.log(`EQ: L${settings.low} M${settings.mid} H${settings.high}`);
         });
     },
 
     bindDSP() {
-        // Данные реального времени (RMS, Centroid, Peak) от DSP Worker
         this.dsp.onRealTimeData = (metrics) => {
             if (this.viz && this.viz.drawRealTimeMetrics) {
                 this.viz.drawRealTimeMetrics(metrics);
             }
         };
 
-        // Результат полного анализа файла
         this.dsp.onFileAnalysisDone = (result, id) => {
-            this.ui.log(`Deep Analysis done for: ${id}. Frames: ${result.frames}`);
-            // Здесь можно добавить отрисовку детальных графиков
+            this.ui.log(`Анализ завершен: ${id}. Кадров: ${result.frames}`);
         };
     },
 
-    // Остановка всего
     stopAll() {
         this.audio.stop();
         this.ui.setLiveState(false);
-        this.ui.log('Stopped.');
+        this.ui.log('Остановлено.');
     },
 
-    // Обработка Drag&Drop или выбора файлов
     async handleFiles(fileList) {
         if (!fileList || fileList.length === 0) return;
-
         const file = fileList[0];
         try {
-            this.ui.log(`Loading ${file.name}...`);
-            
-            // 1. Декодирование
+            this.ui.log(`Загрузка ${file.name}...`);
             const buffer = await this.audio.loadFile(file);
-            this.ui.log(`Loaded ${file.name} (${buffer.duration.toFixed(2)}s). Ready.`);
             
-            // 2. Превью волны (берем кусок из середины)
+            // Превью
             const rawData = buffer.getChannelData(0); 
             const previewLen = 2048;
             const center = Math.floor(rawData.length / 2);
-            // Безопасный слайс
             const slice = rawData.slice(center, center + previewLen);
-            
-            // Конвертация для отрисовки (float -> byte approximation)
             const view = new Uint8Array(previewLen);
-            for(let i=0; i<previewLen; i++) {
-                const val = slice[i] || 0;
-                view[i] = (val + 1) * 128;
-            }
+            for(let i=0; i<previewLen; i++) view[i] = (slice[i] + 1) * 128;
             this.viz.drawWaveform(view);
 
-            // 3. Запуск фонового анализа
-            this.ui.log('Running background analysis...');
+            this.ui.log(`Загружен ${file.name} (${buffer.duration.toFixed(2)}s).`);
+            
+            // Фоновый анализ
             this.dsp.analyzeFullFile(buffer, file.name);
             
         } catch (e) {
             console.error(e);
-            this.ui.log('Error loading file: ' + e.message);
+            this.ui.log('Ошибка загрузки: ' + e.message);
         }
     }
 };
 
-// Запуск при готовности DOM
 document.addEventListener('DOMContentLoaded', () => App.init());
