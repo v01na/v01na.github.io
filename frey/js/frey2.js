@@ -5,7 +5,7 @@ import { DSP } from './dsp.js';
 
 const App = {
     async init() {
-        console.log('Init V2k Demodulator...');
+        console.log('Init V2k Demodulator Full...');
         this.viz = new Visualizer();
         this.ui = new UI(this);
         this.dsp = new DSP(this);
@@ -13,29 +13,25 @@ const App = {
 
         this.bindEvents();
         this.bindDSP();
-        this.ui.log('Система готова.');
+        this.ui.log('Система готова. Загрузите файл или включите поток.');
     },
 
     bindEvents() {
         this.ui.on('play', () => this.audio.playCurrentBuffer());
-        // Убираем stopAll() из play, чтобы можно было микшировать
-        
         this.ui.on('stop', () => this.stopAll());
         this.ui.on('mixer-change', s => this.audio.updateMixer(s));
         this.ui.on('mic-start', async id => { await this.audio.startMicrophone(id); this.ui.setLiveState(true); });
         this.ui.on('stream-start', async url => { await this.audio.startStream(url); this.ui.setLiveState(true); });
         this.ui.on('file-load', f => this.handleFiles(f));
 
-        // 1. ИЗВЛЕЧЬ (EXTRACT)
         this.ui.on('extract-one', () => {
             if(!this.audio.currentBuffer) return alert('Файл не загружен');
-            this.ui.log('Начат анализ DSP...');
+            this.ui.log('Анализ DSP...');
             this.dsp.analyzeFullFile(this.audio.currentBuffer, 'Manual');
         });
 
-        // 2. MATCH DTW
         this.ui.on('match-dtw', () => {
-            this.ui.log('Запуск расчета матрицы DTW...');
+            this.ui.log('Расчет матрицы...');
             this.dsp.runDTW();
         });
     },
@@ -43,29 +39,18 @@ const App = {
     bindDSP() {
         this.dsp.onRealTimeData = m => this.viz.drawRealTimeMetrics(m);
 
-        // РЕЗУЛЬТАТ ИЗВЛЕЧЕНИЯ
         this.dsp.onFileAnalysisDone = (res, id) => {
-            // Форматируем текст для консоли (вместо [object Object])
-            const text = `=== РЕЗУЛЬТАТ АНАЛИЗА ===\n` +
-                         `ID: ${id}\n` +
-                         `Точек графика: ${res.frames}\n` +
-                         `Сжатие (Step): ${res.step}x\n` +
-                         `RMS Samples: ${res.rms.length}\n` +
-                         `Готов к построению матрицы.`;
-            
-            this.ui.printResult(text); // Вывод в большое черное окно
-            this.ui.log('Анализ завершен.');
-            this.viz.drawFullEnvelopes(res); // Рисуем средний график
+            const text = `=== РЕЗУЛЬТАТ АНАЛИЗА ===\nID: ${id}\nФреймов: ${res.frames}\nRMS: ${res.rms.length}\nГотов к матрице.`;
+            this.ui.printResult(text);
+            this.ui.log('Демодуляция завершена.');
+            this.viz.drawFullEnvelopes(res);
         };
 
-        // РЕЗУЛЬТАТ МАТРИЦЫ
         this.dsp.onDTWMatrixReady = (matrix) => {
             this.ui.log('Матрица построена.');
-            this.viz.drawDTWMatrix(matrix); // Рисуем нижний график
-            
-            // Дописываем инфо
+            this.viz.drawDTWMatrix(matrix);
             const current = document.getElementById('results').textContent;
-            this.ui.printResult(current + `\n\n=== DTW MATRIX ===\nРазмер: ${matrix.rows}x${matrix.cols}\nГотово.`);
+            this.ui.printResult(current + `\n\n=== DTW МАТРИЦА ===\n${matrix.rows}x${matrix.cols}\nОК.`);
         };
     },
 
@@ -88,8 +73,8 @@ const App = {
             for(let i=0;i<2048;i++) v[i]=(raw[i*step]+1)*128;
             this.viz.drawWaveform(v);
 
-            this.ui.log('Файл загружен. Нажмите Play или Извлечь.');
-            this.dsp.analyzeFullFile(b, f.name); // Авто-анализ
+            this.ui.log('Файл загружен.');
+            this.dsp.analyzeFullFile(b, f.name);
         } catch(e) {
             this.ui.log('Ошибка: '+e.message);
         }
