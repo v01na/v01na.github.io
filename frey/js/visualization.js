@@ -15,13 +15,12 @@ export class Visualizer {
         this.metricsHistory = []; 
         this.maxHistory = 300;
         
-        // Авто-ресайз при изменении размера окна
         window.addEventListener('resize', () => {
-            // Можно добавить логику подгонки канвасов
+            // Placeholder for resize logic
         });
     }
 
-    // --- 1. REAL-TIME ВОЛНА И МЕТРИКИ ---
+    // --- 1. REAL-TIME ---
     drawWaveform(byteData) {
         const w = this.waveCanvas.width;
         const h = this.waveCanvas.height;
@@ -37,27 +36,47 @@ export class Visualizer {
         for (let i = 0; i < byteData.length; i++) {
             const v = byteData[i] / 128.0;
             const y = v * h / 2;
-            if (i === 0) this.waveCtx.moveTo(x, y);
-            else this.waveCtx.lineTo(x, y);
+            i===0 ? this.waveCtx.moveTo(x, y) : this.waveCtx.lineTo(x, y);
             x += slice;
         }
         this.waveCtx.stroke();
     }
 
     drawRealTimeMetrics(m) {
+        // Добавляем в историю
         this.metricsHistory.push(m);
         if (this.metricsHistory.length > this.maxHistory) this.metricsHistory.shift();
         
         const w = this.envCanvas.width;
         const h = this.envCanvas.height;
         
+        // Очистка
         this.envCtx.clearRect(0, 0, w, h); 
         this.envCtx.fillStyle = '#0f172a'; 
         this.envCtx.fillRect(0, 0, w, h);
         
-        // Рисуем бегущие линии (RMS - синий, Центроид - зеленый)
-        this.drawPath(this.metricsHistory.map(x => x.rms * 4), '#3b82f6', h, w);
-        this.drawPath(this.metricsHistory.map(x => x.centroid / 5000), '#10b981', h, w);
+        // Рисуем линии
+        this.drawPath(this.metricsHistory.map(x => x.rms * 4), '#3b82f6', h, w); // RMS (Blue)
+        this.drawPath(this.metricsHistory.map(x => x.centroid / 8000), '#10b981', h, w); // Centroid (Green)
+        this.drawPath(this.metricsHistory.map(x => x.hilbertPeak), '#ef4444', h, w); // Peak (Red)
+
+        // --- ВОССТАНОВЛЕНО: Текстовые значения (HUD) ---
+        const last = this.metricsHistory[this.metricsHistory.length - 1];
+        if (last) {
+            this.envCtx.font = '10px monospace';
+            
+            // RMS
+            this.envCtx.fillStyle = '#3b82f6';
+            this.envCtx.fillText(`RMS: ${last.rms.toFixed(4)}`, 10, 15);
+            
+            // Centroid
+            this.envCtx.fillStyle = '#10b981';
+            this.envCtx.fillText(`Centroid: ${Math.round(last.centroid)} Hz`, 10, 30);
+            
+            // Hilbert/Peak
+            this.envCtx.fillStyle = '#ef4444';
+            this.envCtx.fillText(`Peak: ${last.hilbertPeak.toFixed(4)}`, 10, 45);
+        }
     }
 
     drawPath(data, color, h, w) {
@@ -77,15 +96,14 @@ export class Visualizer {
         this.envCtx.stroke();
     }
 
-    // --- 2. ПОДРОБНЫЕ ОГИБАЮЩИЕ (ПОСЛЕ ИЗВЛЕЧЕНИЯ) ---
+    // --- 2. STATIC RESULTS ---
     drawFullEnvelopes(res) {
         const w = this.envCanvas.width;
         const h = this.envCanvas.height;
         this.envCtx.fillStyle = '#0f172a'; 
         this.envCtx.fillRect(0, 0, w, h);
         
-        // Функция для детальной отрисовки (Min-Max)
-        // Рисует вертикальную линию от мин до макс значения в пределах одного пикселя X
+        // Высокая детализация (Min-Max)
         const drawDetailed = (data, color) => {
             this.envCtx.fillStyle = color;
             this.envCtx.strokeStyle = color;
@@ -96,37 +114,31 @@ export class Visualizer {
             this.envCtx.beginPath();
             
             for (let x = 0; x < w; x++) {
-                // Вычисляем диапазон индексов массива для текущего пикселя X
                 const start = Math.floor(x * step);
                 const end = Math.floor((x + 1) * step);
-                
                 if (end <= start) continue;
 
                 let min = 1.0;
                 let max = 0.0;
-                
-                // Ищем мин и макс в этом диапазоне
                 for (let i = start; i < end && i < data.length; i++) {
                     if (data[i] < min) min = data[i];
                     if (data[i] > max) max = data[i];
                 }
                 
-                // Масштабируем по высоте Canvas
                 const yMax = h - (max * (h - 20)) - 10;
                 const yMin = h - (min * (h - 20)) - 10;
                 
-                // Рисуем линию
                 this.envCtx.moveTo(x, yMin);
                 this.envCtx.lineTo(x, yMax);
             }
             this.envCtx.stroke();
         };
 
-        if (res.rms) drawDetailed(res.rms, '#3b82f6'); // RMS (Синий)
-        if (res.hilb) drawDetailed(res.hilb, 'rgba(239, 68, 68, 0.6)'); // Hilbert (Красный прозрачный)
+        if (res.rms) drawDetailed(res.rms, '#3b82f6');
+        if (res.hilb) drawDetailed(res.hilb, 'rgba(239, 68, 68, 0.6)');
     }
 
-    // --- 3. МАТРИЦА DTW ---
+    // --- 3. DTW MATRIX ---
     drawDTWMatrix(matrixData) {
         const { matrix, rows, cols } = matrixData;
         const w = this.dtwCanvas.width;
@@ -140,27 +152,22 @@ export class Visualizer {
 
         for (let y = 0; y < h; y++) {
             for (let x = 0; x < w; x++) {
-                // Координаты в матрице данных
                 const my = Math.floor((y / h) * rows);
                 const mx = Math.floor((x / w) * cols);
-                
-                // Получаем значение (0 - похоже, 1 - не похоже)
-                // Инвертируем для визуализации: Ярко = Похоже
                 const val = 1.0 - (matrix[my * cols + mx] || 0);
                 
                 const i = (y * w + x) * 4;
-                d[i]   = val * 255;       // R
-                d[i+1] = val * 100;       // G
-                d[i+2] = val * 50;        // B
-                d[i+3] = 255;             // Alpha
+                d[i]   = val * 255;
+                d[i+1] = val * 100;
+                d[i+2] = val * 50;
+                d[i+3] = 255;
             }
         }
         this.dtwCtx.putImageData(img, 0, 0);
     }
 
-    // --- 4. КЛАСТЕРЫ ---
+    // --- 4. CLUSTERS ---
     drawClusters(data) {
-        // data: { assignments, centroids, points }
         const panel = document.getElementById('clusterVizPanel');
         if (panel) panel.classList.remove('hidden');
 
@@ -175,31 +182,27 @@ export class Visualizer {
 
         const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
 
-        // Рисуем точки
+        // Points
         data.points.forEach((pt, i) => {
             const clusterId = data.assignments[i];
             const color = colors[clusterId % colors.length];
-            
             const x = pt[0] * w;
-            const y = h - (pt[1] * h); // Инвертируем Y
-
+            const y = h - (pt[1] * h);
             ctx.beginPath();
             ctx.arc(x, y, 2, 0, Math.PI * 2);
             ctx.fillStyle = color;
             ctx.fill();
         });
 
-        // Рисуем центроиды
+        // Centroids
         data.centroids.forEach((c, i) => {
             const x = c[0] * w;
             const y = h - (c[1] * h);
-            
             ctx.beginPath();
             ctx.arc(x, y, 6, 0, Math.PI * 2);
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 2;
             ctx.stroke();
-            
             ctx.fillStyle = '#fff';
             ctx.font = '10px Arial';
             ctx.fillText(`C${i}`, x + 8, y);
