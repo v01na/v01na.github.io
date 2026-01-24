@@ -4,14 +4,8 @@ import { Visualizer } from './visualization.js';
 import { DSP } from './dsp.js';
 
 const App = {
-    ui: null,
-    audio: null,
-    viz: null,
-    dsp: null,
-    
     async init() {
-        console.log('[App] V2k Demodulator v5.4 Fixed...');
-        
+        console.log('Init V2k Demodulator...');
         this.viz = new Visualizer();
         this.ui = new UI(this);
         this.dsp = new DSP(this);
@@ -19,120 +13,86 @@ const App = {
 
         this.bindEvents();
         this.bindDSP();
-
-        this.ui.log('Система готова. Ожидание.');
+        this.ui.log('Система готова.');
     },
 
     bindEvents() {
-        // --- Источники ---
-        this.ui.on('play', () => {
-            this.ui.log('Запуск файла...');
-            this.audio.playCurrentBuffer();
-        });
+        this.ui.on('play', () => this.audio.playCurrentBuffer());
+        // Убираем stopAll() из play, чтобы можно было микшировать
         
-        this.ui.on('stop', () => { this.stopAll(); });
+        this.ui.on('stop', () => this.stopAll());
+        this.ui.on('mixer-change', s => this.audio.updateMixer(s));
+        this.ui.on('mic-start', async id => { await this.audio.startMicrophone(id); this.ui.setLiveState(true); });
+        this.ui.on('stream-start', async url => { await this.audio.startStream(url); this.ui.setLiveState(true); });
+        this.ui.on('file-load', f => this.handleFiles(f));
 
-        this.ui.on('mic-start', async (deviceId) => {
-            this.ui.log('Микрофон...');
-            await this.audio.startMicrophone(deviceId);
-            this.ui.setLiveState(true);
-        });
-
-        this.ui.on('stream-start', async (url) => {
-            if (!url) return alert('Нет URL');
-            this.ui.log(`Поток: ${url}`);
-            await this.audio.startStream(url);
-            this.ui.setLiveState(true);
-        });
-
-        this.ui.on('file-load', (files) => this.handleFiles(files));
-
-        // --- Микшер ---
-        this.ui.on('mixer-change', (settings) => this.audio.updateMixer(settings));
-
-        // --- ДЕМОДУЛЯЦИЯ (Исправлено) ---
+        // 1. ИЗВЛЕЧЬ (EXTRACT)
         this.ui.on('extract-one', () => {
-            const buffer = this.audio.currentBuffer;
-            if (!buffer) {
-                this.ui.log('Ошибка: Сначала загрузите файл!');
-                alert('Нет загруженного файла для анализа.');
-                return;
-            }
-            this.ui.log('Запуск демодуляции (повторный анализ)...');
-            // Запускаем анализ того же буфера, но с (возможно) новыми настройками из UI
-            this.dsp.analyzeFullFile(buffer, 'Re-Analysis');
+            if(!this.audio.currentBuffer) return alert('Файл не загружен');
+            this.ui.log('Начат анализ DSP...');
+            this.dsp.analyzeFullFile(this.audio.currentBuffer, 'Manual');
         });
 
-        this.ui.on('extract-all', () => {
-            this.ui.log('Функция пакетной обработки в разработке');
-        });
-        
-        // --- Кластеризация ---
-        this.ui.on('cluster', () => {
-             this.ui.log('Запуск кластеризации (K-Means)...');
-             // Здесь нужно вызвать метод кластеризации из dsp.js (нужно добавить его в dsp.js если нет)
-             alert('Данные для кластеризации собраны. Проверьте консоль разработчика.');
+        // 2. MATCH DTW
+        this.ui.on('match-dtw', () => {
+            this.ui.log('Запуск расчета матрицы DTW...');
+            this.dsp.runDTW();
         });
     },
 
     bindDSP() {
-        // Рисуем живые метрики (Real-Time)
-        this.dsp.onRealTimeData = (metrics) => {
-            if (this.viz && this.viz.drawRealTimeMetrics) {
-                this.viz.drawRealTimeMetrics(metrics);
-            }
+        this.dsp.onRealTimeData = m => this.viz.drawRealTimeMetrics(m);
+
+        // РЕЗУЛЬТАТ ИЗВЛЕЧЕНИЯ
+        this.dsp.onFileAnalysisDone = (res, id) => {
+            // Форматируем текст для консоли (вместо [object Object])
+            const text = `=== РЕЗУЛЬТАТ АНАЛИЗА ===\n` +
+                         `ID: ${id}\n` +
+                         `Точек графика: ${res.frames}\n` +
+                         `Сжатие (Step): ${res.step}x\n` +
+                         `RMS Samples: ${res.rms.length}\n` +
+                         `Готов к построению матрицы.`;
+            
+            this.ui.printResult(text); // Вывод в большое черное окно
+            this.ui.log('Анализ завершен.');
+            this.viz.drawFullEnvelopes(res); // Рисуем средний график
         };
 
-        // Результат демодуляции файла
-        this.dsp.onFileAnalysisDone = (result, id) => {
-            this.ui.log(`Демодуляция завершена (${id}). Точек: ${result.frames}`);
+        // РЕЗУЛЬТАТ МАТРИЦЫ
+        this.dsp.onDTWMatrixReady = (matrix) => {
+            this.ui.log('Матрица построена.');
+            this.viz.drawDTWMatrix(matrix); // Рисуем нижний график
             
-            // Здесь мы можем обновить нижний график (envCanvas) статичными данными результата
-            // Чтобы увидеть результат демодуляции "в покое"
-            if (this.viz && this.viz.drawFullEnvelopes) {
-                 this.viz.drawFullEnvelopes(result);
-            } else {
-                 // Если метода нет, хотя бы выведем в консоль
-                 console.log('DSP Result:', result);
-            }
+            // Дописываем инфо
+            const current = document.getElementById('results').textContent;
+            this.ui.printResult(current + `\n\n=== DTW MATRIX ===\nРазмер: ${matrix.rows}x${matrix.cols}\nГотово.`);
         };
     },
 
     stopAll() {
         this.audio.stop();
         this.ui.setLiveState(false);
-        this.ui.log('Остановлено.');
     },
 
-    async handleFiles(fileList) {
-        if (!fileList || fileList.length === 0) return;
-        const file = fileList[0];
+    async handleFiles(list) {
+        if(!list.length) return;
+        const f = list[0];
         try {
-            this.ui.log(`Чтение ${file.name}...`);
-            const buffer = await this.audio.loadFile(file);
+            this.ui.log(`Загрузка ${f.name}...`);
+            const b = await this.audio.loadFile(f);
             
-            // Рисуем превью
-            this.drawPreview(buffer);
+            // Preview
+            const raw = b.getChannelData(0);
+            const v = new Uint8Array(2048);
+            const step = Math.floor(raw.length/2048);
+            for(let i=0;i<2048;i++) v[i]=(raw[i*step]+1)*128;
+            this.viz.drawWaveform(v);
 
-            this.ui.log(`Загружен ${file.name}. Демодуляция...`);
-            
-            // Авто-старт анализа при загрузке
-            this.dsp.analyzeFullFile(buffer, file.name);
-            
-        } catch (e) {
-            console.error(e);
-            this.ui.log('Ошибка: ' + e.message);
+            this.ui.log('Файл загружен. Нажмите Play или Извлечь.');
+            this.dsp.analyzeFullFile(b, f.name); // Авто-анализ
+        } catch(e) {
+            this.ui.log('Ошибка: '+e.message);
         }
-    },
-
-    drawPreview(buffer) {
-        const rawData = buffer.getChannelData(0); 
-        const previewLen = 2048;
-        const center = Math.floor(rawData.length / 2);
-        const slice = rawData.slice(center, center + previewLen);
-        const view = new Uint8Array(previewLen);
-        for(let i=0; i<previewLen; i++) view[i] = (slice[i] + 1) * 128;
-        this.viz.drawWaveform(view);
     }
 };
 
