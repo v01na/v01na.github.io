@@ -1,134 +1,111 @@
 export class Visualizer {
     constructor() {
-        // Верхний канвас (Волна / Осциллограф)
         this.waveCanvas = document.getElementById('waveCanvas');
-        this.waveCtx = this.waveCanvas ? this.waveCanvas.getContext('2d') : null;
+        this.waveCtx = this.waveCanvas.getContext('2d');
 
-        // Нижний канвас (Огибающие / Метрики RMS, Centroid)
         this.envCanvas = document.getElementById('envCanvas');
-        this.envCtx = this.envCanvas ? this.envCanvas.getContext('2d') : null;
+        this.envCtx = this.envCanvas.getContext('2d');
         
-        // Буфер истории для бегущего графика метрик
+        this.dtwCanvas = document.getElementById('dtwCanvas');
+        this.dtwCtx = this.dtwCanvas.getContext('2d');
+
         this.metricsHistory = []; 
-        this.maxHistory = 300; // Храним последние 300 кадров
+        this.maxHistory = 300;
     }
 
-    // Отрисовка волны (принимает Uint8Array или Float32Array)
-    drawWaveform(dataArray) {
-        if (!this.waveCtx) return;
-
-        const w = this.waveCanvas.width;
-        const h = this.waveCanvas.height;
-        const len = dataArray.length;
-
-        // Очистка фона
-        this.waveCtx.fillStyle = '#020617'; // very dark slate
-        this.waveCtx.fillRect(0, 0, w, h);
-        
-        this.waveCtx.lineWidth = 2;
-        this.waveCtx.strokeStyle = '#3b82f6'; // blue-500
-        this.waveCtx.beginPath();
-
-        const sliceW = w / len;
-        let x = 0;
-
-        // Определяем тип данных (byte vs float)
-        const isByte = dataArray instanceof Uint8Array;
-
-        for (let i = 0; i < len; i++) {
-            let v;
-            if (isByte) {
-                v = dataArray[i] / 128.0; // 0..255 -> 0..2
-                v = v - 1; // -1..1
-            } else {
-                v = dataArray[i]; // уже -1..1
-            }
-            
-            // Масштабируем Y: центр (h/2) + амплитуда
-            const y = (h / 2) + (v * (h / 2));
-
-            if (i === 0) this.waveCtx.moveTo(x, y);
-            else this.waveCtx.lineTo(x, y);
-
-            x += sliceW;
+    // --- REAL-TIME ---
+    drawWaveform(byteData) {
+        const w = this.waveCanvas.width, h = this.waveCanvas.height;
+        this.waveCtx.fillStyle = '#020617'; this.waveCtx.fillRect(0, 0, w, h);
+        this.waveCtx.lineWidth = 1.5; this.waveCtx.strokeStyle = '#3b82f6'; this.waveCtx.beginPath();
+        const slice = w / byteData.length; let x = 0;
+        for (let i = 0; i < byteData.length; i++) {
+            const y = (byteData[i] / 128.0) * h / 2;
+            i===0 ? this.waveCtx.moveTo(x, y) : this.waveCtx.lineTo(x, y);
+            x += slice;
         }
-
-        this.waveCtx.lineTo(w, h / 2);
         this.waveCtx.stroke();
     }
 
-    // Отрисовка метрик реального времени (бегущие графики)
-    drawRealTimeMetrics(metrics) {
-        if (!this.envCtx) return;
-
-        // metrics = { rms: float, centroid: float, hilbertPeak: float }
-        this.metricsHistory.push(metrics);
+    drawRealTimeMetrics(m) {
+        this.metricsHistory.push(m);
+        if (this.metricsHistory.length > this.maxHistory) this.metricsHistory.shift();
         
-        // Удаляем старые, если буфер переполнен
-        if (this.metricsHistory.length > this.maxHistory) {
-            this.metricsHistory.shift();
-        }
-
-        const w = this.envCanvas.width;
-        const h = this.envCanvas.height;
+        const w = this.envCanvas.width, h = this.envCanvas.height;
+        this.envCtx.clearRect(0,0,w,h); this.envCtx.fillStyle='#0f172a'; this.envCtx.fillRect(0,0,w,h);
         
-        // Очистка
-        this.envCtx.clearRect(0, 0, w, h);
-        this.envCtx.fillStyle = '#0f172a';
-        this.envCtx.fillRect(0, 0, w, h);
-
-        // Рисуем сетку (опционально)
-        this.envCtx.strokeStyle = '#1e293b';
-        this.envCtx.lineWidth = 1;
-        this.envCtx.beginPath();
-        this.envCtx.moveTo(0, h/2); this.envCtx.lineTo(w, h/2);
-        this.envCtx.stroke();
-
-        // 1. RMS (Синий) - Умножаем на 3 для наглядности
-        this.drawLineGraph(this.metricsHistory.map(m => m.rms * 3), '#3b82f6', 2);
-
-        // 2. Centroid (Зеленый) - Нормализуем 0..5000Hz -> 0..1
-        this.drawLineGraph(this.metricsHistory.map(m => m.centroid / 5000), '#10b981', 1);
-        
-        // 3. Hilbert Peak (Красный/Прозрачный)
-        this.drawLineGraph(this.metricsHistory.map(m => m.hilbertPeak), 'rgba(239, 68, 68, 0.5)', 1);
-
-        // Текстовая легенда
-        this.envCtx.fillStyle = '#94a3b8';
-        this.envCtx.font = '10px monospace';
-        const last = this.metricsHistory[this.metricsHistory.length-1];
-        if(last) {
-            this.envCtx.fillStyle = '#3b82f6';
-            this.envCtx.fillText(`RMS: ${last.rms.toFixed(4)}`, 10, 20);
-            
-            this.envCtx.fillStyle = '#10b981';
-            this.envCtx.fillText(`Centroid: ${last.centroid.toFixed(0)} Hz`, 10, 35);
-        }
+        // Рисуем бегущие графики (RMS=Blue, Centroid=Green)
+        this.drawPath(this.metricsHistory.map(x=>x.rms*4), '#3b82f6', h, w);
+        this.drawPath(this.metricsHistory.map(x=>x.centroid/5000), '#10b981', h, w);
     }
 
-    // Вспомогательный метод рисования линии
-    drawLineGraph(data, color, width) {
-        const w = this.envCanvas.width;
-        const h = this.envCanvas.height;
-        const len = data.length;
+    drawPath(data, color, h, w) {
         const step = w / this.maxHistory;
-
-        this.envCtx.beginPath();
-        this.envCtx.strokeStyle = color;
-        this.envCtx.lineWidth = width;
-
-        for(let i=0; i<len; i++) {
-            // Ограничиваем значение от 0 до 1
-            let val = data[i];
-            if (val < 0) val = 0;
-            if (val > 1) val = 1;
-
-            const x = i * step;
-            const y = h - (val * h); // Инвертируем Y (0 внизу)
-            
-            if(i===0) this.envCtx.moveTo(x, y);
-            else this.envCtx.lineTo(x, y);
+        this.envCtx.beginPath(); this.envCtx.strokeStyle = color; this.envCtx.lineWidth = 2;
+        for(let i=0;i<data.length;i++){
+            const y = h - (Math.min(1, data[i]) * (h-10)) - 5;
+            i===0?this.envCtx.moveTo(i*step, y):this.envCtx.lineTo(i*step, y);
         }
         this.envCtx.stroke();
+    }
+
+    // --- STATIC ANALYSIS RESULTS ---
+    
+    // 1. Огибающие (результат Extract)
+    drawFullEnvelopes(res) {
+        const w = this.envCanvas.width, h = this.envCanvas.height;
+        this.envCtx.fillStyle = '#0f172a'; this.envCtx.fillRect(0,0,w,h);
+        
+        // Ресемплинг под ширину экрана для отрисовки
+        const fit = (arr) => {
+            const out = new Float32Array(w);
+            const step = arr.length / w;
+            for(let i=0;i<w;i++) out[i] = arr[Math.floor(i*step)] || 0;
+            return out;
+        };
+
+        if(res.rms) this.drawStaticPath(fit(res.rms), '#3b82f6', h);
+        if(res.cent) this.drawStaticPath(fit(res.cent), '#10b981', h);
+        if(res.hilb) this.drawStaticPath(fit(res.hilb), '#ef4444', h);
+    }
+
+    drawStaticPath(data, color, h) {
+        this.envCtx.beginPath(); this.envCtx.strokeStyle = color; this.envCtx.lineWidth = 1;
+        for(let i=0; i<data.length; i++) {
+            const y = h - (data[i] * (h-20)) - 10;
+            i===0?this.envCtx.moveTo(i, y):this.envCtx.lineTo(i, y);
+        }
+        this.envCtx.stroke();
+    }
+
+    // 2. Матрица DTW (Heatmap)
+    drawDTWMatrix(matrixData) {
+        const { matrix, rows, cols } = matrixData;
+        const w = this.dtwCanvas.width, h = this.dtwCanvas.height;
+        this.dtwCtx.fillStyle = '#000'; this.dtwCtx.fillRect(0,0,w,h);
+        
+        // Создаем изображение
+        const img = this.dtwCtx.createImageData(w, h);
+        const d = img.data;
+
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                // Координаты в матрице данных
+                const my = Math.floor((y / h) * rows);
+                const mx = Math.floor((x / w) * cols);
+                
+                // Значение (0..1), где 0 - похоже, 1 - не похоже
+                // Инвертируем: 1 (Ярко) = Похоже
+                const val = 1.0 - (matrix[my * cols + mx] || 0);
+                
+                // Цвет (Сине-Огненная палитра)
+                const i = (y * w + x) * 4;
+                d[i]   = val * 255;       // R
+                d[i+1] = val * 100;       // G
+                d[i+2] = val * 50;        // B
+                d[i+3] = 255;             // Alpha
+            }
+        }
+        this.dtwCtx.putImageData(img, 0, 0);
     }
 }
