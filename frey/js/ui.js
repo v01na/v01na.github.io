@@ -21,14 +21,18 @@ export class UI {
             btnExtract: document.getElementById('btnExtract'),
             btnExtractAll: document.getElementById('btnExtractAll'),
             btnMatch: document.getElementById('btnMatch'),
-            btnCluster: document.getElementById('btnCluster'), // Кнопка кластеров
+            btnCluster: document.getElementById('btnCluster'),
             btnInterpret: document.getElementById('btnInterpretClusters'),
             
             valGain: document.getElementById('val-gain'),
-            micSelect: document.getElementById('micSelect'),
-            liveInd: document.getElementById('liveIndicator'),
+            valLow: document.getElementById('val-low'),
+            valMid: document.getElementById('val-mid'),
+            valHigh: document.getElementById('val-high'),
+            
             log: document.getElementById('log'),
-            results: document.getElementById('results')
+            results: document.getElementById('results'),
+            micSelect: document.getElementById('micSelect'),
+            liveInd: document.getElementById('liveIndicator')
         };
 
         this.initMicList();
@@ -44,28 +48,32 @@ export class UI {
             const devs = await navigator.mediaDevices.enumerateDevices();
             const mics = devs.filter(d => d.kind === 'audioinput');
             const sel = this.els.micSelect;
-            sel.innerHTML = '';
-            mics.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m.deviceId;
-                opt.text = m.label || `Микрофон ${sel.length+1}`;
-                sel.appendChild(opt);
-            });
+            if(sel) {
+                sel.innerHTML = '';
+                mics.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.deviceId;
+                    opt.text = m.label || `Микрофон ${sel.length+1}`;
+                    sel.appendChild(opt);
+                });
+            }
         } catch(e){}
     }
 
     attachListeners() {
-        // --- Сайдбар ---
-        // Используем onclick напрямую для надежности
-        if (this.els.btnToggle) {
+        // --- Сайдбар (Исправлено) ---
+        // Прямой обработчик без делегирования
+        if (this.els.btnToggle && this.els.sidebar) {
             this.els.btnToggle.onclick = (e) => {
+                // Предотвращаем любые дефолтные действия
                 e.preventDefault();
                 e.stopPropagation();
-                if (this.els.sidebar) {
-                    this.els.sidebar.classList.toggle('collapsed');
-                    // Принудительно обновляем ширину графиков
-                    setTimeout(() => window.dispatchEvent(new Event('resize')), 350);
-                }
+                
+                // Переключаем класс
+                this.els.sidebar.classList.toggle('collapsed');
+                
+                // Обновляем графики, так как ширина контейнера изменилась
+                setTimeout(() => window.dispatchEvent(new Event('resize')), 350);
             };
         }
 
@@ -86,9 +94,9 @@ export class UI {
         // --- AI Кнопки ---
         this.els.btnMatch?.addEventListener('click', () => this.trigger('match-dtw'));
         
-        // Кнопка Кластеров (Исправлено)
+        // Кнопка Кластеров
         this.els.btnCluster?.addEventListener('click', () => {
-            console.log('[UI] Cluster clicked');
+            console.log('[UI] Кнопка Кластеры нажата');
             this.trigger('run-cluster');
         });
         
@@ -103,10 +111,10 @@ export class UI {
                 mid: parseFloat(this.els.eqMid.value),
                 high: parseFloat(this.els.eqHigh.value)
             };
-            document.getElementById('val-gain').textContent = s.gain.toFixed(1);
-            document.getElementById('val-low').textContent = s.low;
-            document.getElementById('val-mid').textContent = s.mid;
-            document.getElementById('val-high').textContent = s.high;
+            this.els.valGain.textContent = s.gain.toFixed(1);
+            this.els.valLow.textContent = s.low;
+            this.els.valMid.textContent = s.mid;
+            this.els.valHigh.textContent = s.high;
             this.trigger('mixer-change', s);
         };
         
