@@ -6,25 +6,20 @@ export class UI {
         this.els = {
             sidebar: document.getElementById('sidebar'),
             btnToggle: document.getElementById('btnToggleSidebar'),
-            
-            // Источники
             micBtn: document.getElementById('btnMicStart'),
             radioBtn: document.getElementById('btnStreamConnect'),
             playBtn: document.getElementById('btnPlay'),
             stopBtns: [document.getElementById('btnStop'), document.getElementById('btnStreamStop')],
-            
-            // Микшер
             mixGain: document.getElementById('mix-gain'),
             eqLow: document.getElementById('eq-low'),
             eqMid: document.getElementById('eq-mid'),
             eqHigh: document.getElementById('eq-high'),
             btnResetEQ: document.getElementById('btnResetEQ'),
-            
-            // DSP
             btnExtract: document.getElementById('btnExtract'),
-            btnMatch: document.getElementById('btnMatch'), // <--- Важно
-            
-            // Текст
+            btnExtractAll: document.getElementById('btnExtractAll'),
+            btnMatch: document.getElementById('btnMatch'),
+            btnCluster: document.getElementById('btnCluster'),
+            btnInterpret: document.getElementById('btnInterpretClusters'),
             valGain: document.getElementById('val-gain'),
             valLow: document.getElementById('val-low'),
             valMid: document.getElementById('val-mid'),
@@ -59,7 +54,6 @@ export class UI {
     }
 
     attachListeners() {
-        // Сайдбар
         if (this.els.btnToggle && this.els.sidebar) {
             this.els.btnToggle.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -67,27 +61,16 @@ export class UI {
                 setTimeout(() => window.dispatchEvent(new Event('resize')), 350);
             });
         }
-
-        // Кнопки источников
         this.els.playBtn?.addEventListener('click', () => this.trigger('play'));
         this.els.stopBtns.forEach(b => b?.addEventListener('click', () => this.trigger('stop')));
-        
         this.els.micBtn?.addEventListener('click', () => this.trigger('mic-start', this.els.micSelect.value));
         this.els.radioBtn?.addEventListener('click', () => this.trigger('stream-start', document.getElementById('streamUrl').value));
-        
         const fInput = document.getElementById('fileInput');
         if(fInput) fInput.addEventListener('change', (e) => this.trigger('file-load', e.target.files));
-
-        // DSP Кнопки
-        this.els.btnExtract?.addEventListener('click', () => {
-            console.log('[UI] Clicked Extract');
-            this.trigger('extract-one');
-        });
         
-        this.els.btnMatch?.addEventListener('click', () => {
-            console.log('[UI] Clicked Match DTW');
-            this.trigger('match-dtw');
-        });
+        // DSP Кнопки
+        this.els.btnExtract?.addEventListener('click', () => this.trigger('extract-one'));
+        this.els.btnMatch?.addEventListener('click', () => this.trigger('match-dtw'));
     }
 
     attachMixerListeners() {
@@ -106,27 +89,13 @@ export class UI {
         };
         [this.els.mixGain, this.els.eqLow, this.els.eqMid, this.els.eqHigh].forEach(el => el.addEventListener('input', update));
         this.els.btnResetEQ.addEventListener('click', () => {
-            this.els.mixGain.value = 1;
-            this.els.eqLow.value = 0;
-            this.els.eqMid.value = 0;
-            this.els.eqHigh.value = 0;
-            update();
+            this.els.mixGain.value = 1; this.els.eqLow.value = 0; this.els.eqMid.value = 0; this.els.eqHigh.value = 0; update();
         });
     }
 
     setLiveState(isActive) {
-        if(isActive) this.els.liveInd.classList.remove('hidden');
-        else this.els.liveInd.classList.add('hidden');
+        if(isActive) this.els.liveInd.classList.remove('hidden'); else this.els.liveInd.classList.add('hidden');
     }
-
-    log(msg) { 
-        if(this.els.log) {
-            this.els.log.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-        }
-    }
-
-    // Вывод форматированного результата в большую консоль
-    printResult(text) {
-        if(this.els.results) this.els.results.textContent = text;
-    }
+    log(msg) { if(this.els.log) this.els.log.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`; }
+    printResult(text) { if(this.els.results) this.els.results.textContent = text; }
 }
