@@ -3,20 +3,35 @@ export class UI {
         this.app = app;
         this.listeners = {};
         
-        // Элементы
+        // Кэшируем элементы
         this.els = {
+            // Сайдбар
+            sidebar: document.getElementById('sidebar'),
+            btnToggle: document.getElementById('btnToggleSidebar'),
+
+            // Источники
             micBtn: document.getElementById('btnMicStart'),
             radioBtn: document.getElementById('btnStreamConnect'),
             playBtn: document.getElementById('btnPlay'),
             stopBtns: [document.getElementById('btnStop'), document.getElementById('btnStreamStop')],
             
-            // Mixer
+            // Микшер
             mixGain: document.getElementById('mix-gain'),
             eqLow: document.getElementById('eq-low'),
             eqMid: document.getElementById('eq-mid'),
             eqHigh: document.getElementById('eq-high'),
             btnResetEQ: document.getElementById('btnResetEQ'),
             
+            // DSP / Демодуляция
+            btnExtract: document.getElementById('btnExtract'),
+            btnExtractAll: document.getElementById('btnExtractAll'),
+            
+            // Анализ / AI
+            btnMatch: document.getElementById('btnMatch'),
+            btnCluster: document.getElementById('btnCluster'),
+            btnInterpret: document.getElementById('btnInterpretClusters'),
+            
+            // Текстовые поля
             valGain: document.getElementById('val-gain'),
             valLow: document.getElementById('val-low'),
             valMid: document.getElementById('val-mid'),
@@ -29,7 +44,7 @@ export class UI {
 
         this.initMicList();
         this.attachListeners();
-        this.attachMixerListeners(); // <--- New
+        this.attachMixerListeners();
     }
 
     on(event, callback) { this.listeners[event] = callback; }
@@ -51,19 +66,35 @@ export class UI {
     }
 
     attachListeners() {
-        // ... старые слушатели (Play, Stop, Mic, Radio, File) ...
-        // Я их сократил для краткости, они должны быть такими же, как раньше
+        // --- 1. Логика Сайдбара (Плавное скрытие) ---
+        if (this.els.btnToggle && this.els.sidebar) {
+            this.els.btnToggle.addEventListener('click', (e) => {
+                e.stopPropagation(); // Чтобы клик не ушел дальше
+                this.els.sidebar.classList.toggle('collapsed');
+                // Принудительно вызываем resize, чтобы графики подстроились под новую ширину
+                setTimeout(() => window.dispatchEvent(new Event('resize')), 350);
+            });
+        }
+
+        // --- 2. Источники ---
         this.els.playBtn?.addEventListener('click', () => this.trigger('play'));
         this.els.micBtn?.addEventListener('click', () => this.trigger('mic-start', this.els.micSelect.value));
         this.els.radioBtn?.addEventListener('click', () => this.trigger('stream-start', document.getElementById('streamUrl').value));
         
-        this.els.stopBtns.forEach(b => b?.addEventListener('click', () => this.trigger('stop-live')));
+        this.els.stopBtns.forEach(b => b?.addEventListener('click', () => this.trigger('stop'))); // Единая команда стоп
         
         const fInput = document.getElementById('fileInput');
         if(fInput) fInput.addEventListener('change', (e) => this.trigger('file-load', e.target.files));
+
+        // --- 3. DSP Кнопки (Демодуляция) ---
+        this.els.btnExtract?.addEventListener('click', () => this.trigger('extract-one'));
+        this.els.btnExtractAll?.addEventListener('click', () => this.trigger('extract-all'));
+        
+        // --- 4. AI Кнопки ---
+        this.els.btnCluster?.addEventListener('click', () => this.trigger('cluster'));
+        this.els.btnInterpret?.addEventListener('click', () => this.trigger('interpret'));
     }
 
-    // НОВЫЙ МЕТОД ДЛЯ МИКШЕРА
     attachMixerListeners() {
         const update = () => {
             const settings = {
@@ -73,22 +104,18 @@ export class UI {
                 high: parseFloat(this.els.eqHigh.value)
             };
             
-            // Обновляем текст
             this.els.valGain.textContent = settings.gain.toFixed(1);
-            this.els.valLow.textContent = (settings.low > 0 ? '+' : '') + settings.low + 'dB';
-            this.els.valMid.textContent = (settings.mid > 0 ? '+' : '') + settings.mid + 'dB';
-            this.els.valHigh.textContent = (settings.high > 0 ? '+' : '') + settings.high + 'dB';
+            this.els.valLow.textContent = settings.low;
+            this.els.valMid.textContent = settings.mid;
+            this.els.valHigh.textContent = settings.high;
 
-            // Отправляем в Main
             this.trigger('mixer-change', settings);
         };
 
-        // Слушаем Input (реальное время)
         [this.els.mixGain, this.els.eqLow, this.els.eqMid, this.els.eqHigh].forEach(el => {
             el.addEventListener('input', update);
         });
 
-        // Кнопка Reset
         this.els.btnResetEQ.addEventListener('click', () => {
             this.els.mixGain.value = 1;
             this.els.eqLow.value = 0;
@@ -103,5 +130,7 @@ export class UI {
         else this.els.liveInd.classList.add('hidden');
     }
 
-    log(msg) { this.els.log.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`; }
+    log(msg) { 
+        if(this.els.log) this.els.log.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`; 
+    }
 }
