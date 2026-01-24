@@ -1,33 +1,69 @@
 export class AudioEngine {
-    constructor(visualizer) {
-        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        this.viz = visualizer;
+    constructor(visualizer, dsp) {
+        // Создаем контекст (поддержка старых браузеров)
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
+        
+        this.viz = visualizer; // Ссылка на визуализатор
+        this.dsp = dsp;       // Ссылка на модуль DSP
+        
+        // Узлы аудио графа
         this.source = null;
         this.analyser = this.ctx.createAnalyser();
-        this.analyser.fftSize = 2048;
         
-        // Буфер для отрисовки
-        this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+        // Настройки анализатора
+        this.analyser.fftSize = 2048; // Размер окна (должен быть степенью 2)
+        this.analyser.smoothingTimeConstant = 0.2; // Сглаживание
+        
+        // Буферы данных для анализатора
+        this.byteData = new Uint8Array(this.analyser.frequencyBinCount);
+        this.floatData = new Float32Array(this.analyser.fftSize);
         
         this.isLive = false;
         this.animationId = null;
+        
+        // Буфер текущего файла (для проигрывания)
+        this.currentFileBuffer = null;
+        this.fileSourceNode = null;
     }
 
     // --- 1. Работа с файлами ---
+    
+    // Декодирование загруженного файла
     async loadFile(file) {
-        // Логика декодирования (как в старом скрипте)
         const arrayBuffer = await file.arrayBuffer();
+        // Важно: decodeAudioData отсоединяет буфер, копируем если нужно сохранить
         const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+        this.currentFileBuffer = audioBuffer;
         return audioBuffer;
     }
 
     playSelectedFile() {
-        // ... (код плеера)
+        if (!this.currentFileBuffer) return;
+        this.stop(); // Сначала стоп
+
+        this.fileSourceNode = this.ctx.createBufferSource();
+        this.fileSourceNode.buffer = this.currentFileBuffer;
+        
+        // Подключаем граф: Source -> Analyser -> Destination (Колонки)
+        this.fileSourceNode.connect(this.analyser);
+        this.analyser.connect(this.ctx.destination);
+        
+        this.fileSourceNode.start(0);
+        this.source = this.fileSourceNode;
+        
+        this.isLive = true; // Считаем проигрывание тоже "живым" процессом для визуализации
+        this.loop();
+        
+        this.fileSourceNode.onended = () => {
+            this.isLive = false;
+        };
     }
 
     // --- 2. Микрофон (Real-Time) ---
+    
     async startMicrophone(deviceId) {
-        this.stop(); // Остановить всё текущее
+        this.stop();
         await this.ctx.resume();
 
         try {
@@ -35,48 +71,55 @@ export class AudioEngine {
                 audio: { 
                     deviceId: deviceId ? { exact: deviceId } : undefined,
                     echoCancellation: false,
-                    noiseSuppression: false, // Нам нужен "сырой" сигнал для анализа!
+                    noiseSuppression: false, 
                     autoGainControl: false 
                 } 
             };
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
             this.source = this.ctx.createMediaStreamSource(stream);
             this.source.connect(this.analyser);
-            // Микрофон НЕ подключаем к destination (колонки), иначе будет свист (Feedback loop)
+            // НЕ подключаем микрофон к destination, чтобы не было Feedback Loop
             
             this.isLive = true;
             this.loop();
-            console.log('[Audio] Mic started');
         } catch (err) {
             console.error('Mic Error:', err);
-            alert('Ошибка доступа к микрофону: ' + err.message);
+            throw new Error('Mic access denied: ' + err.message);
         }
     }
 
     // --- 3. Радио-поток (Real-Time) ---
+    
     async startStream(url) {
         this.stop();
         await this.ctx.resume();
 
+        // Используем скрытый тег <audio> в HTML
         const audioEl = document.getElementById('streamPlayer');
+        if (!audioEl) {
+            throw new Error('Audio element #streamPlayer not found in HTML');
+        }
+        
         audioEl.src = url;
-        audioEl.crossOrigin = "anonymous"; // Важно для CORS
+        audioEl.crossOrigin = "anonymous"; // Критично для CORS
 
         try {
             await audioEl.play();
-            // Создаем источник из HTML Audio Element
+            
+            // Создаем MediaElementSource только один раз
             if (!this.streamSourceNode) {
                 this.streamSourceNode = this.ctx.createMediaElementSource(audioEl);
             }
+            
             this.source = this.streamSourceNode;
             this.source.connect(this.analyser);
-            this.analyser.connect(this.ctx.destination); // Радио должно играть в колонки
+            this.analyser.connect(this.ctx.destination); // Звук идет в колонки
             
             this.isLive = true;
             this.loop();
-            console.log('[Audio] Radio stream started');
         } catch (e) {
-            alert('Ошибка потока. Возможно CORS или неверный URL.');
+            console.error(e);
+            throw new Error('Stream failed. Check CORS or URL.');
         }
     }
 
@@ -89,24 +132,35 @@ export class AudioEngine {
             this.source.mediaStream.getTracks().forEach(track => track.stop());
         }
         
+        // Остановить файл
+        if (this.fileSourceNode) {
+            try { this.fileSourceNode.stop(); } catch(e){}
+            this.fileSourceNode = null;
+        }
+        
         // Остановить радио
         const audioEl = document.getElementById('streamPlayer');
-        audioEl.pause();
-        audioEl.src = "";
+        if (audioEl) {
+            audioEl.pause();
+            audioEl.src = "";
+        }
     }
 
-    // Цикл анализа (60 FPS)
+    // Главный цикл визуализации и анализа (60 FPS)
     loop() {
         if (!this.isLive) return;
         
-        // Получаем данные
-        this.analyser.getByteTimeDomainData(this.dataArray);
+        // 1. Получаем байты для отрисовки волны (быстро)
+        this.analyser.getByteTimeDomainData(this.byteData);
+        this.viz.drawWaveform(this.byteData);
         
-        // Отправляем на визуализацию
-        this.viz.drawWaveform(this.dataArray);
+        // 2. Получаем float для DSP (точно)
+        this.analyser.getFloatTimeDomainData(this.floatData);
         
-        // TODO: Здесь же будем отправлять данные в Worker для анализа Фрея
-        // worker.postMessage({ type: 'process', data: this.dataArray });
+        // 3. Отправляем в DSP модуль (а он отправит в Worker)
+        if (this.dsp) {
+            this.dsp.processRealTime(this.floatData, this.ctx.sampleRate);
+        }
 
         this.animationId = requestAnimationFrame(() => this.loop());
     }
