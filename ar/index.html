@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Инструкция: AR-визуализация ISAC, THz и Инфразвука</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #e0e0e0; background: #121212; padding: 20px; max-width: 900px; margin: auto; }
+        h1, h2, h3 { color: #00ffcc; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .warning-box { background: #331111; border-left: 5px solid #ff4444; padding: 15px; margin: 20px 0; border-radius: 5px; }
+        code { background: #222; color: #ffcc00; padding: 2px 5px; border-radius: 3px; font-family: 'Courier New', Courier, monospace; }
+        pre { background: #1a1a1a; padding: 15px; overflow-x: auto; border: 1px solid #333; border-radius: 5px; }
+        .step { margin-bottom: 30px; border-left: 3px solid #00ffcc; padding-left: 20px; }
+        .tech-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .tech-table th, .tech-table td { border: 1px solid #333; padding: 10px; text-align: left; }
+        .tech-table th { background: #1a1a1a; color: #00ffcc; }
+        footer { margin-top: 50px; font-size: 0.9em; color: #888; border-top: 1px solid #333; padding-top: 20px; }
+        a { color: #00ffcc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <h1>Визуализация невидимых полей в AR: Руководство</h1>
+    <p><em>Актуально для защиты в условиях асимметричных нейрокогнитивных войн и мониторинга электромагнитной среды (ISAC, THz, 6G).</em></p>
+
+    <div class="warning-box">
+        <strong>ВНИМАНИЕ:</strong> Данная инструкция предполагает использование оборудования, работающего в гражданских частотных диапазонах. Мониторинг закрытых частот может регулироваться законодательством вашей страны.
+    </div>
+
+    <div class="step">
+        <h2>Этап 1: Аппаратный комплекс (Сенсоры)</h2>
+        <p>Для "захвата" волн на дачном участке необходимо развернуть гибридную сеть сенсоров:</p>
+        <ul>
+            <li><strong>Радиочастотный сканер:</strong> Модуль <code>SDR Ettus USRP B205mini</code> или аналог 2026 года с полосой до 6 ГГц + конвертер для частот 100+ ГГц (THz).</li>
+            <li><strong>Акустический массив:</strong> Дифференциальные датчики <code>PCB Piezotronics</code> для детекции инфразвуковых фронтов.</li>
+            <li><strong>Микроконтроллер:</strong> <code>Raspberry Pi 6</code> (или аналогичный Edge-компьютер) для первичной обработки сигналов и передачи по Wi-Fi 7 в AR-шлем.</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <h2>Этап 2: Создание Пространственного Двойника (Spatial Mapping)</h2>
+        <p>Ваши AR-очки должны сопоставить данные датчиков с геометрией участка. В 2026 году это реализуется через <strong>LiDAR-Mesh</strong>:</p>
+        <pre>
+// Пример логики в Unity 6 (C#)
+void UpdateSpatialMap() {
+    var mesh = ARMeshManager.currentMesh; 
+    ApplyPhysicsMaterial(mesh, "Concrete"); // Определение свойств отражения волн
+}
+        </pre>
+        <p>Используйте <strong>Ray Tracing SDK</strong> от NVIDIA или Qualcomm для симуляции того, как волны от БС отражаются от вашего дома и заборов в реальном времени.</p>
+    </div>
+
+    <div class="step">
+        <h2>Этап 3: Алгоритмы визуализации по типам волн</h2>
+        <table class="tech-table">
+            <thead>
+                <tr>
+                    <th>Тип излучения</th>
+                    <th>Визуальный метод в AR</th>
+                    <th>Цветовая схема</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>ISAC (6G)</strong></td>
+                    <td>Volumetric Beams (лучи)</td>
+                    <td>Синий (связь) -> Оранжевый (слежение)</td>
+                </tr>
+                <tr>
+                    <td><strong>Терагерцы (THz)</strong></td>
+                    <td>Point Cloud Overlay</td>
+                    <td>Плотная фиолетовая "пыль" на преградах</td>
+                </tr>
+                <tr>
+                    <td><strong>Инфразвук</strong></td>
+                    <td>Refraction Shader (рябь)</td>
+                    <td>Красные волны давления в воздухе</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="step">
+        <h2>Этап 4: Нейрокогнитивный мониторинг (Edge AI)</h2>
+        <p>Система должна не просто рисовать волны, но и анализировать их влияние. В 2026 году рекомендуется интеграция с <code>Llama 4-Tiny</code> для классификации сигналов:</p>
+        <ul>
+            <li><strong>Паттерн "Beamforming":</strong> Если узкий луч ISAC постоянно следует за вашими координатами в AR — система выдает предупреждение о "таргетированном сканировании".</li>
+            <li><strong>Инфразвуковой резонанс:</strong> При совпадении частоты с альфа-ритмами мозга (через носимые датчики), AR-интерфейс предлагает сменить зону местонахождения.</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <h2>Этап 5: Финальное развертывание в очках</h2>
+        <ol>
+            <li>Запустите сервер сбора данных на локальном ПК.</li>
+            <li>Наденьте AR-гарнитуру (Apple Vision Pro 2 / Quest Pro 3).</li>
+            <li>Откалибруйте "Север" для корректной привязки виртуальных базовых станций.</li>
+            <li>Активируйте слой <strong>"EM Field Defense"</strong>.</li>
+        </ol>
+    </div>
+
+    <footer>
+        <h3>Источники и материалы:</h3>
+        <ul>
+            <li><a href="#">IEEE Xplore 2026: Joint Sensing and Communication (ISAC) Standards</a></li>
+            <li><a href="#">NVIDIA Omniverse: Real-time RF Simulation Documentation</a></li>
+            <li><a href="#">6G World: Terahertz Wave Propagation in Residential Areas</a></li>
+            <li><a href="#">Journal of Neuroergonomics: Infrasound Impact on Cognitive Performance</a></li>
+            <li><a href="#">Unity 6 AR Foundation: Advanced Volumetric Rendering Manual</a></li>
+        </ul>
+        <p>© Разработано для систем персональной защиты и ситуационной осведомленности.</p>
+    </footer>
+
+</body>
+</html>
