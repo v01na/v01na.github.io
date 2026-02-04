@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Судебная ДТ-МРТ: Фиксация DEW Воздействий</title>
+    
+    <!-- Tailwind CSS v4 via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-neon-cyan: #00f3ff;
+            --color-alert-red: #ff2a2a;
+            --bg-glass: rgba(8, 8, 8, 0.9);
+            --border-glass: rgba(255, 255, 255, 0.15);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000000;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            cursor: crosshair; /* Forensic precision cursor */
+        }
+
+        .font-mono { font-family: 'Share Tech Mono', monospace; }
+
+        /* --- UI PANELS --- */
+        .glass-panel {
+            position: absolute;
+            background: var(--bg-glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 1);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            pointer-events: auto; /* Catch clicks */
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(0, 243, 255, 0.3);
+        }
+
+        /* --- DRAG HANDLES --- */
+        .drag-handle {
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        /* --- CANVAS --- */
+        canvas#gl {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 0;
+            outline: none;
+        }
+
+        /* --- UTILS --- */
+        .neon-text-red { text-shadow: 0 0 8px rgba(255, 42, 42, 0.8); }
+        .neon-text-cyan { text-shadow: 0 0 8px rgba(0, 243, 255, 0.6); }
+        
+        button { user-select: none; }
+        button:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+
+    <!-- 3D RENDERING LAYER -->
+    <canvas id="gl"></canvas>
+
+    <!-- === UI LAYER === -->
+
+    <!-- 1. HEADER (CENTER) -->
+    <!-- Centered initially with CSS, JS removes transform on drag start -->
+    <div id="panel_header" class="glass-panel w-[550px] top-4 left-1/2 -translate-x-1/2 rounded-lg border-t-2 border-t-[#00f3ff]">
+        
+        <!-- Drag Zone -->
+        <div id="drag_header" class="drag-handle w-full py-3 flex flex-col items-center justify-center bg-white/5 border-b border-white/10 group">
+            <h1 class="text-xl font-bold tracking-[0.2em] text-white uppercase group-hover:text-[#00f3ff] transition">
+                ДТ - <span class="text-[#00f3ff]">МРТ</span> АНАЛИЗАТОР
+            </h1>
+            <p class="text-[9px] text-gray-400 uppercase tracking-widest font-mono mt-1">
+                Forensic White Matter Tractography Unit
+            </p>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="flex justify-between items-center px-4 py-2 bg-black/40">
+            <div class="flex gap-2">
+                <button onclick="togglePanel('panel_left')" class="px-3 py-1 text-[10px] font-mono border border-white/10 hover:bg-[#00f3ff]/10 hover:text-[#00f3ff] transition rounded uppercase">
+                    Входные Данные
+                </button>
+                <button onclick="togglePanel('panel_right')" class="px-3 py-1 text-[10px] font-mono border border-white/10 hover:bg-[#ff2a2a]/10 hover:text-[#ff2a2a] transition rounded uppercase">
+                    Протокол Повреждений
+                </button>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span class="text-[9px] font-mono text-gray-400">SERVER: CONNECTED</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. LEFT PANEL (DATA SOURCE) -->
+    <div id="panel_left" class="glass-panel w-[300px] top-32 left-8 rounded-lg">
+        <div id="drag_left" class="drag-handle h-8 bg-white/5 border-b border-white/10 flex items-center justify-between px-3">
+            <span class="text-[#00f3ff] text-[10px] font-bold uppercase tracking-widest">Параметры Излучения</span>
+            <button onclick="togglePanel('panel_left')" class="text-gray-500 hover:text-white px-2">✕</button>
+        </div>
+
+        <div class="p-4 space-y-4">
+            <!-- Spectrum Graph -->
+            <div class="relative h-28 bg-black/60 border border-white/10 overflow-hidden">
+                <div class="absolute inset-0 flex items-end justify-around px-1 pb-1 opacity-80">
+                     <!-- Animated Bars -->
+                     <div class="w-1.5 bg-cyan-900 h-[20%]"></div>
+                     <div class="w-1.5 bg-cyan-800 h-[35%]"></div>
+                     <div class="w-1.5 bg-[#ff9100] h-[95%] shadow-[0_0_10px_#ff9100]"></div> <!-- Frey Peak -->
+                     <div class="w-1.5 bg-cyan-700 h-[40%]"></div>
+                     <div class="w-1.5 bg-cyan-800 h-[25%]"></div>
+                     <div class="w-1.5 bg-cyan-900 h-[10%]"></div>
+                </div>
+                <!-- Grid lines -->
+                <div class="absolute inset-0 border-t border-white/5" style="top: 25%"></div>
+                <div class="absolute inset-0 border-t border-white/5" style="top: 50%"></div>
+                <div class="absolute inset-0 border-t border-white/5" style="top: 75%"></div>
+                
+                <div class="absolute top-1 right-1 text-[8px] text-[#ff9100] font-mono bg-black/80 px-1">PEAK: 1.3GHz</div>
+            </div>
+
+            <div class="font-mono text-[10px] space-y-2">
+                <div class="flex justify-between border-b border-white/10 pb-1">
+                    <span class="text-gray-400">ТИП ВОЗДЕЙСТВИЯ:</span>
+                    <span class="text-white">Импульсный СВЧ</span>
+                </div>
+                <div class="flex justify-between border-b border-white/10 pb-1">
+                    <span class="text-gray-400">МОДУЛЯЦИЯ:</span>
+                    <span class="text-[#00f3ff]">FREY-AUDIO</span>
+                </div>
+                <div class="flex justify-between pb-1">
+                    <span class="text-gray-400">ВРЕМЕННОЙ ЛАГ:</span>
+                    <span class="text-[#00f3ff]">0.0 ms (SYNC)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. RIGHT PANEL (FORENSICS) -->
+    <div id="panel_right" class="glass-panel w-[300px] top-32 right-8 rounded-lg">
+        <div id="drag_right" class="drag-handle h-8 bg-white/5 border-b border-white/10 flex items-center justify-between px-3">
+            <span class="text-[#ff2a2a] text-[10px] font-bold uppercase tracking-widest neon-text-red">Фиксация Повреждений</span>
+            <button onclick="togglePanel('panel_right')" class="text-gray-500 hover:text-white px-2">✕</button>
+        </div>
+
+        <div class="p-4 space-y-4">
+            <!-- Controls -->
+            <div class="space-y-2">
+                <label class="flex items-center justify-between text-[10px] font-mono text-gray-300 cursor-pointer hover:text-white">
+                    <span>Слой: <span class="text-[#00f3ff]">Трактография (FA)</span></span>
+                    <input type="checkbox" checked class="accent-[#00f3ff]" onchange="toggleTracts(this)">
+                </label>
+                <label class="flex items-center justify-between text-[10px] font-mono text-gray-300 cursor-pointer hover:text-white">
+                    <span>Слой: <span class="text-[#ff2a2a]">Карта Повреждений</span></span>
+                    <input type="checkbox" checked class="accent-[#ff2a2a]" onchange="toggleLesion(this)">
+                </label>
+            </div>
+
+            <!-- Stats Box -->
+            <div class="border border-[#ff2a2a]/40 bg-[#ff2a2a]/5 p-3 rounded">
+                <div class="text-[9px] text-[#ff2a2a] uppercase font-bold mb-2">Автоматическая Детекция</div>
+                
+                <div class="flex justify-between text-[10px] font-mono mb-1">
+                    <span class="text-gray-400">ROI:</span>
+                    <span class="text-white">Corpus Callosum</span>
+                </div>
+                 <div class="flex justify-between text-[10px] font-mono mb-1">
+                    <span class="text-gray-400">Анизотропия (FA):</span>
+                    <span class="text-[#ff2a2a] font-bold">0.21 (КРИТИЧЕСКИ НИЗКАЯ)</span>
+                </div>
+                <div class="w-full h-1 bg-gray-800 mt-2 rounded-full overflow-hidden">
+                    <div class="h-full bg-[#ff2a2a] w-[25%] shadow-[0_0_5px_red]"></div>
+                </div>
+            </div>
+
+            <button class="w-full py-2.5 mt-2 bg-gradient-to-r from-[#ff2a2a]/20 to-transparent border border-[#ff2a2a]/50 hover:border-[#ff2a2a] text-white text-[10px] font-bold uppercase tracking-widest transition cursor-pointer">
+                Зафиксировать в Протокол
+            </button>
+        </div>
+    </div>
+
+    <!-- 4. FOOTER -->
+    <div class="fixed bottom-0 left-0 w-full h-6 bg-black border-t border-white/10 flex items-center justify-between px-4 z-40 pointer-events-none">
+        <div class="flex gap-4 text-[9px] font-mono text-gray-500">
+            <span>MODALITY: <span class="text-white">DTI/MRI</span></span>
+            <span>VOXEL SPACE: <span class="text-white">MNI-152</span></span>
+            <span>SLICE: <span id="slice-info" class="text-[#00f3ff]">AXIAL</span></span>
+        </div>
+        <div class="text-[9px] font-mono text-gray-400">
+            SECURE FORENSIC ENVIRONMENT v4.2
+        </div>
+    </div>
+
+    <!-- === LOGIC === -->
+    <script>
+        // --- ROBUST DRAG AND DROP (Fixes Jumping) ---
+        function makeDraggable(elId, handleId) {
+            const el = document.getElementById(elId);
+            const handle = document.getElementById(handleId);
+            
+            let isDragging = false;
+            let startX, startY;
+            let initialLeft, initialTop;
+
+            handle.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                isDragging = true;
+                
+                // 1. Get current mouse position
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                // 2. Get current element position relative to viewport
+                const rect = el.getBoundingClientRect();
+                initialLeft = rect.left;
+                initialTop = rect.top;
+
+                // 3. CRITICAL: Switch from CSS centering to absolute pixel positioning
+                // This prevents the "jump" when transform is removed or updated
+                el.style.transform = 'none'; 
+                el.style.left = initialLeft + 'px';
+                el.style.top = initialTop + 'px';
+                el.style.bottom = 'auto'; 
+                el.style.right = 'auto';
+                el.style.margin = '0';
+
+                // Change cursor globally
+                document.body.style.cursor = 'grabbing';
+
+                // Attach listeners to document to handle fast movements
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+
+            function onMouseMove(e) {
+                if (!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                el.style.left = (initialLeft + dx) + 'px';
+                el.style.top = (initialTop + dy) + 'px';
+            }
+
+            function onMouseUp() {
+                isDragging = false;
+                document.body.style.cursor = 'crosshair';
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+        }
+
+        // Initialize Panels
+        makeDraggable('panel_header', 'drag_header');
+        makeDraggable('panel_left', 'drag_left');
+        makeDraggable('panel_right', 'drag_right');
+
+        // --- UI TOGGLES ---
+        window.togglePanel = function(id) {
+            const el = document.getElementById(id);
+            if (el.style.display === 'none') {
+                el.style.display = 'flex';
+            } else {
+                el.style.display = 'none';
+            }
+        };
+
+        // Placeholder functions for Niivue interactions
+        window.toggleTracts = function(cb) {
+            if(window.nv) {
+                // Toggle visibility of first volume (Base)
+                window.nv.setOpacity(0, cb.checked ? 1.0 : 0.0);
+            }
+        };
+
+        window.toggleLesion = function(cb) {
+             if(window.nv) {
+                // Toggle visibility of second volume (Overlay)
+                window.nv.setOpacity(1, cb.checked ? 0.7 : 0.0);
+            }
+        }
+
+    </script>
+
+    <!-- === NIIVUE WEBGL === -->
+    <script type="module" async>
+        import { Niivue } from "https://unpkg.com/@niivue/niivue@0.57.0/dist/index.js"
+
+        const nv = new Niivue({
+            isResizeCanvas: false,
+            backColor: [0, 0, 0, 1], // Pure Black
+            show3Dcrosshair: true,
+            loadingText: "ЗАГРУЗКА ДТ-СКАНОВ...",
+            dragAndDropEnabled: true
+        });
+
+        // Make global for UI interaction
+        window.nv = nv;
+
+        await nv.attachTo("gl");
+
+        // Load Volumes:
+        // 1. Standard Brain (Gray scale)
+        // 2. Simulated Lesion Map (Heatmap)
+        const volumeList = [
+            { 
+                url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz",
+                colormap: "gray",
+                opacity: 1
+            },
+            {
+                // We reuse the same volume but color it differently to simulate a "Damage Heatmap"
+                // In a real app, this would be the DTI_FA.nii.gz file
+                url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz",
+                colormap: "hot",
+                cal_min: 80, // Threshold to show only "bright" areas as lesions
+                cal_max: 120,
+                opacity: 0.5 
+            }
+        ];
+
+        await nv.loadVolumes(volumeList);
+
+        // Configure Layout: 4 Views (Multiplanar)
+        nv.setSliceType(nv.sliceTypeMultiplanar);
+
+        // Configure Crosshair: Red for Forensics
+        nv.opts.crosshairColor = [1, 0, 0, 1];
+        nv.opts.crosshairWidth = 1.2;
+        
+        // Settings
+        nv.opts.isColorbar = false; // Hide bar
+        nv.opts.textHeight = 0.025; // Nice small text
+        
+        // Initial Draw
+        await nv.updateGLVolume();
+        
+    </script>
+</body>
+</html>
