@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Forensic DTI Viewer: Quad-View Mode</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg: #000000;
+      --glass-bg: rgba(10, 10, 10, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --accent-cyan: #00f3ff;
+      --accent-red: #ff2a2a;
+      --text: #e0f2fe;
+    }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      user-select: none;
+    }
+
+    /* --- FULLSCREEN CANVAS LAYOUT --- */
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 0; /* Background layer */
+      outline: none;
+      cursor: crosshair;
+    }
+
+    /* --- GLASS UI LAYER --- */
+    #ui-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none; /* Let clicks pass through to canvas */
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 10px;
+    }
+
+    .glass-panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--glass-border);
+      border-radius: 4px;
+      pointer-events: auto; /* Re-enable clicks for UI */
+      display: flex;
+      flex-direction: column;
+      transition: all 0.3s ease;
+    }
+    
+    .glass-panel h3 {
+      margin: 0;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 11px;
+      color: var(--accent-cyan);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .panel-content {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Header */
+    header {
+      pointer-events: auto;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(180deg, rgba(20,20,20,0.9), rgba(0,0,0,0));
+      padding: 0 20px;
+      margin-bottom: 10px;
+    }
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 16px;
+      margin: 0;
+      letter-spacing: 2px;
+    }
+    h1 span { color: var(--accent-cyan); }
+
+    /* Controls */
+    label { font-size: 9px; color: #888; text-transform: uppercase; }
+    
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 3px;
+      background: #333;
+      margin-top: 5px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 10px;
+      height: 10px;
+      background: var(--accent-cyan);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    button {
+      background: rgba(0, 243, 255, 0.1);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 10px;
+      padding: 6px 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    button:hover { background: rgba(0, 243, 255, 0.2); }
+
+    /* Loading Overlay */
+    #loading {
+      position: absolute;
+      inset: 0;
+      background: black;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      transition: opacity 0.5s;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 2px solid #333;
+      border-top-color: var(--accent-cyan);
+      border-radius: 50%;
+      animation: spin 1s infinite linear;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* Hidden utility */
+    .hidden { opacity: 0; pointer-events: none; }
+    .collapsed { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- LAYER 0: NIIVUE CANVAS -->
+  <canvas id="gl"></canvas>
+
+  <!-- LAYER 1: LOADING -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <div style="margin-top: 15px; color: var(--accent-cyan); font-size: 12px;">SYSTEM INITIALIZING...</div>
+  </div>
+
+  <!-- LAYER 2: UI OVERLAY -->
+  <div id="ui-layer">
+    
+    <!-- TOP BAR -->
+    <header>
+      <h1>ДТ - <span>МРТ</span> <span style="font-size: 10px; color: #666;">QUAD-VIEW MODE</span></h1>
+      <div style="font-size: 10px; color: #666;">PATIENT ID: <span style="color: white;">X-99-FR</span></div>
+    </header>
+
+    <!-- MAIN UI AREA (Left/Right Panels) -->
+    <div style="display: flex; justify-content: space-between; flex: 1; align-items: flex-start;">
+      
+      <!-- LEFT: CONTROLS -->
+      <div class="glass-panel" style="width: 260px;">
+        <h3 onclick="toggleContent('ctrl-content')">Настройки Трактографии <span>▼</span></h3>
+        <div id="ctrl-content" class="panel-content">
+          <button id="loadBtn" style="width: 100%;">Load Demo Data</button>
+          
+          <div>
+            <label>Толщина Волокна</label>
+            <input type="range" id="fiberRadius" min="0" max="20" value="3">
+          </div>
+          
+          <div>
+            <label>Прозрачность (X-Ray)</label>
+            <input type="range" id="xRaySlider" min="0" max="10" value="0">
+          </div>
+
+          <div>
+             <label>Фильтр Отображения</label>
+             <select id="fiberColor" style="width: 100%; background: #222; color: white; border: 1px solid #444; font-size: 10px;">
+               <option value="Global">Направление (Global)</option>
+               <option value="Local">Локальный Вектор</option>
+             </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: ANALYSIS -->
+      <div class="glass-panel" style="width: 260px;">
+        <h3 onclick="toggleContent('anal-content')">Суд-Мед Анализ <span>▼</span></h3>
+        <div id="anal-content" class="panel-content">
+          <!-- Graph Mockup -->
+          <div style="height: 60px; background: rgba(0,0,0,0.5); border: 1px solid #333; position: relative;">
+            <div style="position: absolute; bottom: 0; left: 0; height: 30%; width: 20%; background: #004444;"></div>
+            <div style="position: absolute; bottom: 0; left: 22%; height: 50%; width: 20%; background: #006666;"></div>
+            <div style="position: absolute; bottom: 0; left: 44%; height: 90%; width: 20%; background: var(--accent-red); box-shadow: 0 0 5px red;"></div>
+            <div style="position: absolute; bottom: 0; left: 66%; height: 40%; width: 20%; background: #004444;"></div>
+          </div>
+          <div style="font-size: 9px; color: var(--accent-red); text-align: right;">ANOMALY DETECTED</div>
+
+          <!-- Stats -->
+          <div style="display: flex; justify-content: space-between; font-size: 10px; border-bottom: 1px solid #333; padding-bottom: 5px;">
+            <span style="color: #888;">FA Value:</span>
+            <span style="color: var(--accent-red); font-weight: bold;">0.18 (LOW)</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 10px;">
+            <span style="color: #888;">Symmetry:</span>
+            <span style="color: white;">-24% (Left)</span>
+          </div>
+
+          <button style="margin-top: 10px; border-color: var(--accent-red); color: var(--accent-red); background: rgba(255,0,0,0.1);">Экспорт Протокола</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM BAR -->
+    <div class="glass-panel" style="align-self: flex-start; margin-bottom: 10px; width: 100%;">
+       <div style="padding: 5px 10px; font-size: 10px; display: flex; justify-content: space-between;">
+         <div>SLICE: <span id="slice-info" style="color: var(--accent-cyan);">AXIAL 124</span></div>
+         <div>MOUSE: <span style="color: #888;">L-Click=Nav | R-Click=Contrast | Wheel=Zoom</span></div>
+       </div>
+    </div>
+
+  </div>
+
+  <!-- LOGIC -->
+  <script type="module">
+    import * as niivue from "https://niivue.com/demos/dist/index.js";
+
+    const canvas = document.getElementById('gl');
+    const loadBtn = document.getElementById('loadBtn');
+    const loading = document.getElementById('loading');
+    
+    let nv1 = new niivue.Niivue({
+      backColor: [0, 0, 0, 1], // Pure Black
+      show3Dcrosshair: true,   // Forensic Red Crosshair
+      loadingText: "LOADING..."
+    });
+
+    // --- SETUP ---
+    async function init() {
+      await nv1.attachToCanvas(canvas);
+      
+      // QUAD VIEW SETUP (The key to BrainChop look)
+      nv1.setSliceType(nv1.sliceTypeMultiplanar); // 4 Views
+      nv1.opts.multiplanarShowRender = niivue.SHOW_RENDER.ALWAYS; // Show 3D in 4th quadrant
+      
+      // RED CROSSHAIR
+      nv1.opts.crosshairColor = [1, 0, 0, 1];
+      nv1.opts.crosshairWidth = 1;
+      
+      // Remove text overlay for clean look
+      nv1.opts.textHeight = 0.02; 
+      nv1.opts.isColorbar = false;
+
+      // Auto-load Demo
+      loadData();
+    }
+
+    async function loadData() {
+      loading.style.opacity = 1;
+      try {
+        // 1. Brain Volume
+        await nv1.loadVolumes([{ url: "https://niivue.com/demos/images/mni152.nii.gz" }]);
+        
+        // 2. Tractography (Fibers)
+        await nv1.loadMeshes([{ url: "https://niivue.com/demos/images/TR_S_R.tt.gz" }]);
+        
+        // Settings for Fibers
+        if (nv1.meshes.length > 0) {
+          let id = nv1.meshes[0].id;
+          nv1.setMeshProperty(id, "fiberRadius", 0.3);
+          nv1.setMeshProperty(id, "rgba255", [0, 243, 255, 255]);
+          nv1.setMeshShader(id, "specular");
+        }
+        
+        // Set view
+        nv1.setClipPlane([0, 0, 0]); // Show full brain
+        nv1.updateGLVolume();
+        
+      } catch(e) { console.error(e); }
+      loading.style.opacity = 0;
+      setTimeout(() => loading.classList.add('hidden'), 500);
+    }
+
+    // --- UI EVENTS ---
+    loadBtn.onclick = loadData;
+
+    document.getElementById('fiberRadius').oninput = function() {
+      if(nv1.meshes.length) {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", this.value * 0.1);
+        nv1.updateGLVolume();
+      }
+    };
+
+    document.getElementById('xRaySlider').oninput = function() {
+      nv1.opts.meshXRay = this.value / 10;
+      nv1.drawScene();
+    };
+    
+    document.getElementById('fiberColor').onchange = function() {
+      if(nv1.meshes.length) {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", this.value);
+      }
+    };
+
+    // Collapse toggle
+    window.toggleContent = (id) => {
+      document.getElementById(id).classList.toggle('collapsed');
+    };
+
+    // Run
+    init();
+
+  </script>
+</body>
+</html>
