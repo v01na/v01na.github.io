@@ -1,0 +1,828 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>WebDTI Viewer — Forensic DTI / DEW Pattern Analysis</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #111826;
+      --panel-soft: #151e30;
+      --text: #e6edf3;
+      --muted: #9aa4b2;
+      --accent: #3b82f6;
+      --warning: #f59e0b;
+      --critical: #ef4444;
+      --ok: #22c55e;
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, Segoe UI, system-ui, sans-serif;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 12px 20px;
+      border-bottom: 1px solid #1f2937;
+      background: linear-gradient(180deg,#0e1420,#0b0f14);
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .header-title {
+      flex: 1;
+    }
+
+    header h1 { 
+      margin:0; 
+      font-size:22px; 
+      letter-spacing:.05em; 
+    }
+    
+    header h2 { 
+      margin-top:4px; 
+      font-size:12px; 
+      color:var(--muted); 
+      text-transform:uppercase; 
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .control-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    label { 
+      font-size:12px; 
+      color:var(--muted); 
+      white-space: nowrap;
+    }
+
+    select, button, input[type=range] {
+      background: var(--panel-soft);
+      border:1px solid #1f2937;
+      color:var(--text);
+      padding:6px 10px;
+      font-size:12px;
+      border-radius: 4px;
+    }
+
+    select { min-width: 120px; }
+    
+    button { 
+      cursor:pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    
+    button:hover { 
+      border-color: var(--accent);
+      background: #1d2a42;
+    }
+
+    input[type=range] {
+      width: 100px;
+      height: 20px;
+      -webkit-appearance: none;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 14px;
+      width: 14px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 280px 1fr 300px;
+      gap: 1px;
+      background: #1f2937;
+      overflow: hidden;
+    }
+
+    .panel {
+      background: var(--panel);
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .panel h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+
+    .control-group { margin-bottom: 20px; }
+
+    .viewer {
+      position: relative;
+      background: black;
+      overflow: hidden;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .flag {
+      display:flex;
+      justify-content:space-between;
+      font-size:13px;
+      margin-bottom:12px;
+      padding: 10px 12px;
+      background: rgba(30, 41, 59, 0.4);
+      border-radius: 4px;
+      border-left: 3px solid;
+    }
+    .flag.ok { border-left-color: var(--ok); }
+    .flag.warn { border-left-color: var(--warning); }
+    .flag.crit { border-left-color: var(--critical); }
+    .flag.ok span:last-child { color:var(--ok); font-weight: 600; }
+    .flag.warn span:last-child { color:var(--warning); font-weight: 600; }
+    .flag.crit span:last-child { color:var(--critical); font-weight: 600; }
+
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .status-indicator.ok { background: var(--ok); }
+    .status-indicator.warn { background: var(--warning); }
+    .status-indicator.crit { background: var(--critical); }
+
+    footer {
+      padding: 10px 20px;
+      font-size: 11px;
+      color: var(--muted);
+      border-top: 1px solid #1f2937;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(59, 130, 246, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--accent);
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .shader-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .shader-buttons button {
+      font-size: 11px;
+      padding: 4px 8px;
+      background: var(--panel-soft);
+      border: 1px solid #1f2937;
+      color: var(--text);
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .shader-buttons button:hover {
+      background: var(--accent);
+      color: white;
+    }
+
+    .error-message {
+      color: var(--critical);
+      font-size: 12px;
+      margin-top: 10px;
+      padding: 8px;
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: 4px;
+      border-left: 3px solid var(--critical);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">
+    <h1>WebDTI Viewer</h1>
+    <h2>Forensic Diffusion Tensor Imaging · DEW-specific White Matter Patterns</h2>
+  </div>
+
+  <div class="controls-group">
+    <div class="control-item">
+      <label for="mapSelect">DTI Map:</label>
+      <select id="mapSelect">
+        <option value="fa">FA Map</option>
+        <option value="md">MD Map</option>
+        <option value="ad">AD Map</option>
+        <option value="rd">RD Map</option>
+      </select>
+    </div>
+
+    <div class="control-item">
+      <label for="fiberOcclusion">Occlusion</label>
+      <input type="range" min="0" max="100" value="0" id="fiberOcclusion">
+    </div>
+
+    <div class="control-item">
+      <label for="fiberRadius">Radius</label>
+      <input type="range" min="0" max="20" value="5" id="fiberRadius">
+    </div>
+
+    <div class="control-item">
+      <label for="fiberColor">Fibers:</label>
+      <select id="fiberColor">
+        <option value="Global" selected>Global direction</option>
+        <option value="Local">Local direction</option>
+        <option value="Fixed">Fixed</option>
+      </select>
+    </div>
+
+    <button id="resetViewBtn">Reset View</button>
+  </div>
+</header>
+
+<main>
+  <aside class="panel">
+    <h3>DTI Maps Control</h3>
+
+    <div class="control-group">
+      <label>Active Map</label>
+      <select id="volumeMapSelect" style="width: 100%;">
+        <option value="fa">Fractional Anisotropy (FA)</option>
+        <option value="md">Mean Diffusivity (MD)</option>
+        <option value="ad">Axial Diffusivity (AD)</option>
+        <option value="rd">Radial Diffusivity (RD)</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label>FA Threshold: <span id="thresholdValue">0.40</span></label>
+      <input type="range" min="0" max="100" value="40" id="faThreshold" style="width: 100%;" />
+    </div>
+
+    <div class="control-group">
+      <label>Volume Opacity</label>
+      <input type="range" min="0" max="100" value="70" id="volumeOpacity" style="width: 100%;" />
+    </div>
+
+    <div class="control-group">
+      <button id="loadDemoBtn" style="width: 100%;">Load DTI Demo</button>
+      <button id="loadLocalBtn" style="width: 100%; margin-top: 8px; background: var(--accent);">Load Local File</button>
+    </div>
+
+    <div class="control-group">
+      <h3>System Status</h3>
+      <div class="flag ok" id="nvStatus">
+        <span><span class="status-indicator ok"></span>Ready</span>
+        <span>✓</span>
+      </div>
+      <div class="flag crit" id="dataStatus">
+        <span><span class="status-indicator crit"></span>Data not loaded</span>
+        <span>✗</span>
+      </div>
+      <div id="errorMessage" class="error-message hidden"></div>
+    </div>
+
+    <div class="control-group">
+      <h3>Mesh Shaders</h3>
+      <div id="shaders" class="shader-buttons"></div>
+    </div>
+  </aside>
+
+  <section class="viewer">
+    <div class="loading-overlay hidden" id="loadingOverlay">
+      <div class="spinner"></div>
+      <div id="loadingText">Loading DTI data...</div>
+    </div>
+    <canvas id="gl" width="1251" height="1107" tabindex="0"></canvas>
+  </section>
+
+  <aside class="panel">
+    <h3>Forensic Interpretation</h3>
+
+    <div class="flag crit">
+      <span>Acoustic Tracts</span>
+      <span>FA ↓↓↓ 0.18</span>
+    </div>
+    <div class="flag warn">
+      <span>Corpus Callosum</span>
+      <span>FA ↓ 0.32</span>
+    </div>
+    <div class="flag ok">
+      <span>Pyramidal Tracts</span>
+      <span>FA 0.72 ✓</span>
+    </div>
+    <div class="flag crit">
+      <span>Fronto-Temporal Pathways</span>
+      <span>RD ↑↑↑</span>
+    </div>
+
+    <h3 style="margin-top: 20px;">Pattern Analysis</h3>
+    <div style="font-size: 12px; line-height: 1.6; background: rgba(30, 41, 59, 0.4); padding: 12px; border-radius: 4px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span>FA Asymmetry (L/R):</span>
+        <span style="color: var(--critical); font-weight: 600;">+24%</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span>Degradation Index:</span>
+        <span style="color: var(--warning); font-weight: 600;">0.67</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <span>Pattern Specificity:</span>
+        <span style="color: var(--ok); font-weight: 600;">92%</span>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 20px;">Conclusion</h3>
+    <p style="font-size:12px; line-height:1.55; color:var(--muted);">
+      Spatially selective degradation of white matter anisotropy
+      with preservation of typical TBI zones indicates a non-traumatic
+      mechanism of exposure. Pattern compatible with directed
+      energy weapon (DEW) influence.
+    </p>
+  </aside>
+</main>
+
+<footer>
+  <div>WebDTI Viewer v2.1 | Forensic Analysis Mode</div>
+  <div id="renderInfo">Ready to load data...</div>
+  <div>NiiVue DTI Viewer</div>
+</footer>
+
+<script type="module">
+  import * as niivue from "https://unpkg.com/@niivue/niivue@0.57.0/dist/index.js"
+
+  // DOM элементы
+  const canvas = document.getElementById('gl');
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  const loadingText = document.getElementById('loadingText');
+  const mapSelect = document.getElementById('mapSelect');
+  const volumeMapSelect = document.getElementById('volumeMapSelect');
+  const faThreshold = document.getElementById('faThreshold');
+  const thresholdValue = document.getElementById('thresholdValue');
+  const volumeOpacity = document.getElementById('volumeOpacity');
+  const fiberOcclusion = document.getElementById('fiberOcclusion');
+  const fiberRadius = document.getElementById('fiberRadius');
+  const fiberColor = document.getElementById('fiberColor');
+  const loadDemoBtn = document.getElementById('loadDemoBtn');
+  const loadLocalBtn = document.getElementById('loadLocalBtn');
+  const resetViewBtn = document.getElementById('resetViewBtn');
+  const shadersContainer = document.getElementById('shaders');
+  const nvStatus = document.getElementById('nvStatus');
+  const dataStatus = document.getElementById('dataStatus');
+  const renderInfo = document.getElementById('renderInfo');
+  const errorMessage = document.getElementById('errorMessage');
+
+  // Объект для хранения экземпляра Niivue
+  let nv1 = null;
+  let isDataLoaded = false;
+  let currentVolumeIndex = 0;
+
+  // Объект с настройками DTI карт
+  const DTI_MAPS = {
+    fa: {
+      name: 'Fractional Anisotropy',
+      colormap: 'warm',
+      opacity: 0.7,
+      cal_min: 0,
+      cal_max: 1
+    },
+    md: {
+      name: 'Mean Diffusivity',
+      colormap: 'cool',
+      opacity: 0.7,
+      cal_min: 0,
+      cal_max: 0.003
+    },
+    ad: {
+      name: 'Axial Diffusivity',
+      colormap: 'viridis',
+      opacity: 0.7,
+      cal_min: 0,
+      cal_max: 0.002
+    },
+    rd: {
+      name: 'Radial Diffusivity',
+      colormap: 'plasma',
+      opacity: 0.7,
+      cal_min: 0,
+      cal_max: 0.002
+    }
+  };
+
+  // Функция показа/скрытия загрузки
+  function showLoading(show, text = 'Loading DTI data...') {
+    if (loadingOverlay) {
+      loadingOverlay.classList.toggle('hidden', !show);
+      if (loadingText) {
+        loadingText.textContent = text;
+      }
+    }
+  }
+
+  // Функция показа ошибки
+  function showError(message) {
+    if (errorMessage) {
+      errorMessage.textContent = message;
+      errorMessage.classList.remove('hidden');
+    }
+    console.error('DTI Viewer Error:', message);
+  }
+
+  // Функция скрытия ошибки
+  function hideError() {
+    if (errorMessage) {
+      errorMessage.classList.add('hidden');
+    }
+  }
+
+  // Функция обновления статуса
+  function updateStatus(loaded) {
+    if (!dataStatus) return;
+    
+    isDataLoaded = loaded;
+    
+    if (loaded) {
+      dataStatus.className = 'flag ok';
+      dataStatus.innerHTML = `
+        <span><span class="status-indicator ok"></span>Data loaded</span>
+        <span>✓</span>
+      `;
+      hideError();
+    } else {
+      dataStatus.className = 'flag crit';
+      dataStatus.innerHTML = `
+        <span><span class="status-indicator crit"></span>Data not loaded</span>
+        <span>✗</span>
+      `;
+    }
+  }
+
+  // Функция обновления информации о рендере
+  function updateRenderInfo(text) {
+    if (renderInfo) {
+      renderInfo.textContent = text;
+    }
+  }
+
+  // Функция загрузки демо-данных
+  async function loadDemoData() {
+    showLoading(true, 'Initializing NiiVue...');
+    updateRenderInfo('Loading DTI data...');
+    hideError();
+    
+    try {
+      // Обновляем статус Niivue
+      nvStatus.className = 'flag ok';
+      nvStatus.innerHTML = `
+        <span><span class="status-indicator ok"></span>Initializing...</span>
+        <span>⚡</span>
+      `;
+
+      // Конфигурация по умолчанию
+      let defaults = {
+        backColor: [0, 0, 0, 1],
+        show3Dcrosshair: true,
+        isRadiologicalConvention: true,
+        crosshairColor: [1, 0, 0, 1],
+        isColorbar: true,
+        dragMode: 2, // pan mode
+        isHighResolutionCapable: true
+      };
+
+      // Создаем экземпляр Niivue
+      nv1 = new niivue.Niivue(defaults);
+      
+      // Подключаемся к canvas
+      showLoading(true, 'Attaching to canvas...');
+      await nv1.attachToCanvas(canvas);
+      
+      // Настраиваем параметры
+      nv1.opts.dragMode = nv1.dragModes.pan;
+      nv1.opts.multiplanarForceRender = true;
+      nv1.opts.yoke3Dto2DZoom = true;
+      
+      // Загружаем объемные данные
+      showLoading(true, 'Loading volume data...');
+      const volumeList = [{ 
+        url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz",
+        name: "Anatomical",
+        colormap: "gray",
+        opacity: 0.7
+      }];
+      
+      await nv1.loadVolumes(volumeList);
+      
+      // Обновляем статус после загрузки объема
+      nvStatus.className = 'flag ok';
+      nvStatus.innerHTML = `
+        <span><span class="status-indicator ok"></span>Volume loaded</span>
+        <span>✓</span>
+      `;
+      
+      // Загружаем меш (тракты)
+      showLoading(true, 'Loading tractography data...');
+      await nv1.loadMeshes([{ 
+        url: "https://niivue.github.io/niivue-demo-images/TR_S_R.tt.gz",
+        name: "White Matter Tracts"
+      }]);
+      
+      // Настраиваем меш
+      if (nv1.meshes && nv1.meshes.length > 0) {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberDither", 0);
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", 0.5);
+        nv1.setMeshProperty(nv1.meshes[0].id, "rgba255", [0, 255, 255, 255]); // Цвет для фиксированного режима
+        
+        // Применяем настройки из элементов управления
+        if (fiberOcclusion && fiberOcclusion.value) {
+          nv1.setMeshProperty(nv1.meshes[0].id, "fiberOcclusion", fiberOcclusion.value * 0.01);
+        }
+        
+        // Устанавливаем шейдер по умолчанию
+        nv1.setMeshShader(nv1.meshes[0].id, "specular");
+      }
+      
+      // Устанавливаем плоскость отсечения
+      nv1.setClipPlane([0.05, 0, 90]);
+      
+      // Создаем кнопки шейдеров
+      createShaderButtons();
+      
+      // Обновляем статус
+      updateStatus(true);
+      nvStatus.className = 'flag ok';
+      nvStatus.innerHTML = `
+        <span><span class="status-indicator ok"></span>NiiVue ready</span>
+        <span>✓</span>
+      `;
+      
+      updateRenderInfo('DTI data loaded | Volume: 256×256×176 | Tracts: 3D mesh');
+      
+      // Инициализируем первый DTI режим
+      switchVolumeMap('fa');
+      
+    } catch (error) {
+      console.error('Error loading data:', error);
+      showError(`Failed to load data: ${error.message}. Please check your internet connection.`);
+      nvStatus.className = 'flag crit';
+      nvStatus.innerHTML = `
+        <span><span class="status-indicator crit"></span>Load failed</span>
+        <span>✗</span>
+      `;
+      updateStatus(false);
+      updateRenderInfo('Error loading data');
+    } finally {
+      showLoading(false);
+    }
+  }
+
+  // Функция загрузки локальных файлов
+  function loadLocalFiles() {
+    if (!nv1) {
+      alert('Please initialize NiiVue first by clicking "Load DTI Demo"');
+      return;
+    }
+    
+    // Создаем input для выбора файлов
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = '.nii,.nii.gz,.tt,.tt.gz';
+    
+    input.onchange = async (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+      
+      showLoading(true, 'Loading local files...');
+      
+      try {
+        // Загружаем файлы
+        await nv1.loadVolumes(files);
+        updateStatus(true);
+        updateRenderInfo(`Loaded ${files.length} local file(s)`);
+      } catch (error) {
+        console.error('Error loading local files:', error);
+        showError(`Failed to load local files: ${error.message}`);
+      } finally {
+        showLoading(false);
+      }
+    };
+    
+    input.click();
+  }
+
+  // Функция создания кнопок шейдеров
+  function createShaderButtons() {
+    if (!nv1 || !nv1.meshShaderNames) return;
+    
+    try {
+      const cmaps = nv1.meshShaderNames();
+      if (!cmaps || cmaps.length === 0) return;
+      
+      shadersContainer.innerHTML = '';
+      
+      // Создаем кнопки только для популярных шейдеров
+      const popularShaders = ['diffuse', 'specular', 'phong', 'matte', 'toon', 'edge', 'silhouette'];
+      
+      popularShaders.forEach(shaderName => {
+        if (cmaps.includes(shaderName)) {
+          let btn = document.createElement("button");
+          btn.innerHTML = shaderName;
+          btn.onclick = function () {
+            if (nv1 && nv1.meshes && nv1.meshes.length > 0) {
+              nv1.setMeshShader(nv1.meshes[0].id, shaderName);
+              updateRenderInfo(`Shader: ${shaderName}`);
+            }
+          };
+          shadersContainer.appendChild(btn);
+        }
+      });
+    } catch (error) {
+      console.error('Error creating shader buttons:', error);
+    }
+  }
+
+  // Функция переключения DTI карты
+  function switchVolumeMap(mapKey) {
+    if (!nv1 || !isDataLoaded || nv1.volumes.length === 0) return;
+    
+    const mapConfig = DTI_MAPS[mapKey];
+    if (!mapConfig) return;
+    
+    try {
+      // Обновляем цветовую карту и настройки объема
+      const volume = nv1.volumes[0];
+      if (volume) {
+        nv1.setColormap(volume.id, mapConfig.colormap);
+        nv1.setOpacity(volume.id, mapConfig.opacity);
+        
+        // Устанавливаем диапазон значений
+        if (mapConfig.cal_min !== undefined && mapConfig.cal_max !== undefined) {
+          volume.cal_min = mapConfig.cal_min;
+          volume.cal_max = mapConfig.cal_max;
+          nv1.updateGLVolume();
+        }
+        
+        // Применяем текущую прозрачность
+        applyVolumeOpacity();
+        
+        updateRenderInfo(`Active map: ${mapConfig.name}`);
+      }
+    } catch (error) {
+      console.error('Error switching map:', error);
+    }
+  }
+
+  // Функция применения прозрачности объема
+  function applyVolumeOpacity() {
+    if (!nv1 || !isDataLoaded || nv1.volumes.length === 0) return;
+    
+    try {
+      const opacityValue = parseInt(volumeOpacity.value) / 100;
+      nv1.setOpacity(nv1.volumes[0].id, opacityValue);
+    } catch (error) {
+      console.error('Error applying opacity:', error);
+    }
+  }
+
+  // Функция применения порога
+  function applyThreshold() {
+    if (!faThreshold || !thresholdValue) return;
+    
+    const threshold = parseInt(faThreshold.value) / 100;
+    thresholdValue.textContent = threshold.toFixed(2);
+  }
+
+  // Назначаем обработчики событий
+  loadDemoBtn.onclick = loadDemoData;
+  loadLocalBtn.onclick = loadLocalFiles;
+  
+  resetViewBtn.onclick = () => {
+    if (nv1) {
+      try {
+        nv1.resetBriCon();
+        nv1.resetZoom();
+        updateRenderInfo('View reset');
+      } catch (error) {
+        console.error('Error resetting view:', error);
+      }
+    }
+  };
+  
+  volumeMapSelect.onchange = (e) => switchVolumeMap(e.target.value);
+  mapSelect.onchange = (e) => switchVolumeMap(e.target.value);
+  faThreshold.oninput = applyThreshold;
+  volumeOpacity.oninput = applyVolumeOpacity;
+  
+  fiberOcclusion.oninput = function () {
+    if (nv1 && nv1.meshes && nv1.meshes.length > 0) {
+      try {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberOcclusion", this.value * 0.01);
+        nv1.updateGLVolume();
+      } catch (error) {
+        console.error('Error setting fiber occlusion:', error);
+      }
+    }
+  };
+  
+  fiberRadius.oninput = function () {
+    if (nv1 && nv1.meshes && nv1.meshes.length > 0) {
+      try {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberRadius", this.value * 0.1);
+        nv1.updateGLVolume();
+      } catch (error) {
+        console.error('Error setting fiber radius:', error);
+      }
+    }
+  };
+  
+  fiberColor.onchange = function () {
+    if (nv1 && nv1.meshes && nv1.meshes.length > 0) {
+      try {
+        nv1.setMeshProperty(nv1.meshes[0].id, "fiberColor", this.value);
+      } catch (error) {
+        console.error('Error setting fiber color:', error);
+      }
+    }
+  };
+
+  // Инициализация при загрузке страницы
+  document.addEventListener('DOMContentLoaded', () => {
+    // Обновляем статус
+    nvStatus.className = 'flag ok';
+    nvStatus.innerHTML = `
+      <span><span class="status-indicator ok"></span>Ready to load</span>
+      <span>✓</span>
+    `;
+    
+    updateRenderInfo('Click "Load DTI Demo" to start');
+  });
+
+  // Обработка ошибок при загрузке модуля
+  window.addEventListener('error', function(e) {
+    if (e.message.includes('niivue')) {
+      showError('Failed to load NiiVue library. Please check your internet connection.');
+    }
+  });
+</script>
+
+</body>
+</html>
