@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neuro-Forensic DTI Analyzer (Fullscreen)</title>
+    
+    <!-- Tailwind CSS v4 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-neon-cyan: #00f3ff;
+            --color-neon-purple: #bc13fe;
+            --color-neon-orange: #ff9100;
+            --color-alert-red: #ff2a2a;
+            --bg-glass: rgba(11, 15, 25, 0.75); /* Darker, less transparent for readability */
+            --border-glass: rgba(0, 243, 255, 0.2);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #05070a;
+            color: #e0f2fe;
+            font-family: 'Orbitron', sans-serif;
+            cursor: crosshair; /* GLOBAL CROSSHAIR CURSOR */
+        }
+
+        .font-mono { font-family: 'Share Tech Mono', monospace; }
+
+        /* FORENSIC BLUEPRINT GRID BACKGROUND */
+        .blueprint-grid {
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            background-color: #020408;
+            background-image: 
+                /* Major Grid lines */
+                linear-gradient(rgba(0, 243, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.1) 1px, transparent 1px),
+                /* Minor Grid lines */
+                linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+            background-size: 100px 100px, 20px 20px;
+            /* Vignette for depth */
+            mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+            -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0.3) 100%);
+        }
+
+        /* GLASSMORPHISM PANELS */
+        .glass-panel {
+            background: var(--bg-glass);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--border-glass);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Canvas Setup */
+        canvas#gl {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 0;
+            outline: none;
+        }
+
+        /* UI Layering */
+        #ui-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+            pointer-events: none; /* Let clicks pass through to canvas */
+        }
+        
+        /* Enable clicks on panels */
+        .interactive-panel {
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LAYER 0: Blueprint Background -->
+    <div class="blueprint-grid"></div>
+
+    <!-- LAYER 1: Niivue Fullscreen Canvas -->
+    <canvas id="gl"></canvas>
+
+    <!-- LAYER 2: Floating UI Panels -->
+    <div id="ui-layer" class="flex flex-col justify-between p-4">
+        
+        <!-- TOP HEADER -->
+        <header id="panel-header" class="interactive-panel glass-panel h-14 rounded-lg flex items-center justify-between px-4 mb-4 transition-opacity duration-300">
+            <div class="flex items-center gap-4">
+                <div class="w-6 h-6 border border-[#00f3ff] flex items-center justify-center bg-cyan-900/30">
+                    <div class="w-2 h-2 bg-[#00f3ff]"></div>
+                </div>
+                <h1 class="text-lg font-bold text-white tracking-widest uppercase">
+                    Neuro-Forensic <span class="text-[#00f3ff]">DTI</span>
+                </h1>
+                
+                <!-- View Controls (Toggle Panels) -->
+                <div class="ml-8 flex gap-2 text-[10px] font-mono">
+                    <span class="text-gray-400 self-center mr-2">UI VIEW:</span>
+                    <button onclick="togglePanel('panel-left')" class="px-2 py-1 border border-white/20 hover:bg-white/10 cursor-pointer">L.PANEL</button>
+                    <button onclick="togglePanel('panel-right')" class="px-2 py-1 border border-white/20 hover:bg-white/10 cursor-pointer">R.PANEL</button>
+                    <button onclick="togglePanel('panel-footer')" class="px-2 py-1 border border-white/20 hover:bg-white/10 cursor-pointer">FOOTER</button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 text-xs font-mono">
+                <span class="text-[#ff2a2a]">REC: ACTIVE</span>
+                <span class="text-gray-400">ID: X99-FR</span>
+            </div>
+        </header>
+
+        <!-- MIDDLE SECTION (Left & Right Panels) -->
+        <div class="flex-1 flex justify-between items-start overflow-hidden">
+            
+            <!-- LEFT PANEL: Controls & Signal -->
+            <aside id="panel-left" class="interactive-panel glass-panel w-[300px] rounded-lg p-4 flex flex-col gap-4 transition-opacity duration-300">
+                <div class="flex justify-between items-center border-b border-white/10 pb-2 mb-2">
+                    <h2 class="text-[#00f3ff] text-xs font-bold uppercase tracking-widest">Signal Source</h2>
+                    <button onclick="togglePanel('panel-left')" class="text-gray-500 hover:text-white cursor-pointer">[x]</button>
+                </div>
+
+                <!-- Static Visualizer (No Animation) -->
+                <div class="h-32 bg-black/60 border border-white/10 relative p-2 flex items-end justify-between">
+                     <!-- Static bars simulating a snapshot of data -->
+                     <div class="w-1 bg-[#bc13fe] h-[30%]"></div>
+                     <div class="w-1 bg-[#bc13fe] h-[50%]"></div>
+                     <div class="w-1 bg-[#bc13fe] h-[20%]"></div>
+                     <div class="w-1 bg-[#00f3ff] h-[60%]"></div>
+                     <div class="w-1 bg-[#00f3ff] h-[80%]"></div>
+                     <div class="w-1 bg-[#ff9100] h-[95%] shadow-[0_0_5px_#ff9100]"></div> <!-- Peak -->
+                     <div class="w-1 bg-[#00f3ff] h-[70%]"></div>
+                     <div class="w-1 bg-[#bc13fe] h-[40%]"></div>
+                     <div class="w-1 bg-[#bc13fe] h-[25%]"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 font-mono text-[10px]">
+                    <div class="p-2 bg-white/5 border border-white/10">
+                        <div class="text-gray-400">OFFSET</div>
+                        <div class="text-[#00f3ff]">-0.02ms</div>
+                    </div>
+                    <div class="p-2 bg-white/5 border border-white/10">
+                        <div class="text-gray-400">CONFIDENCE</div>
+                        <div class="text-[#ff9100]">99.8%</div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-white/10">
+                    <h3 class="text-gray-300 text-xs font-bold mb-2">DTI SETTINGS</h3>
+                    <div class="space-y-3 font-mono text-[10px]">
+                        <div class="flex items-center justify-between">
+                            <span>THRESHOLD</span>
+                            <span class="text-[#00f3ff]">0.2</span>
+                        </div>
+                        <!-- Custom Range Input Styled -->
+                        <div class="h-1 w-full bg-gray-700 relative">
+                            <div class="absolute left-0 top-0 h-full w-[40%] bg-[#00f3ff]"></div>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 mt-2">
+                            <div class="w-3 h-3 border border-[#00f3ff] bg-[#00f3ff]"></div>
+                            <span>SHOW TRACTS</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 border border-[#ff2a2a] bg-[#ff2a2a]"></div>
+                            <span>SHOW LESIONS</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- RIGHT PANEL: Analytics -->
+            <aside id="panel-right" class="interactive-panel glass-panel w-[300px] rounded-lg p-4 flex flex-col gap-4 transition-opacity duration-300">
+                 <div class="flex justify-between items-center border-b border-white/10 pb-2 mb-2">
+                    <h2 class="text-[#00f3ff] text-xs font-bold uppercase tracking-widest">Pathology Report</h2>
+                    <button onclick="togglePanel('panel-right')" class="text-gray-500 hover:text-white cursor-pointer">[x]</button>
+                </div>
+
+                <div class="flex items-center gap-4 bg-white/5 p-3 border-l-2 border-[#ff2a2a]">
+                    <div class="text-[#ff2a2a] font-bold text-2xl">HI</div>
+                    <div class="text-[10px] font-mono">
+                        <div class="text-white font-bold">CORPUS CALLOSUM</div>
+                        <div class="text-gray-400">NON-KINETIC TRAUMA</div>
+                    </div>
+                </div>
+
+                <div class="h-40 border border-white/10 bg-black/40 p-2 relative">
+                    <div class="text-[9px] text-gray-500 absolute top-1 left-1">FA HISTOGRAM</div>
+                    <!-- Static Histogram -->
+                    <div class="flex items-end h-full gap-1 pt-4">
+                        <div class="flex-1 bg-cyan-900 h-[20%]"></div>
+                        <div class="flex-1 bg-cyan-800 h-[40%]"></div>
+                        <div class="flex-1 bg-cyan-700 h-[60%]"></div>
+                        <div class="flex-1 bg-[#ff2a2a] h-[30%] opacity-80 border-t border-[#ff2a2a]"></div> <!-- Damage -->
+                        <div class="flex-1 bg-cyan-600 h-[50%]"></div>
+                        <div class="flex-1 bg-cyan-900 h-[10%]"></div>
+                    </div>
+                </div>
+
+                <button class="w-full py-2 bg-[#00f3ff]/10 border border-[#00f3ff] text-[#00f3ff] text-xs font-bold hover:bg-[#00f3ff]/20 transition cursor-pointer">
+                    EXPORT PDF EVIDENCE
+                </button>
+            </aside>
+        </div>
+
+        <!-- FOOTER -->
+        <footer id="panel-footer" class="interactive-panel glass-panel h-8 rounded-lg flex items-center justify-between px-4 mt-4 text-[10px] font-mono text-gray-400 transition-opacity duration-300">
+            <div>SYSTEM: <span class="text-white">NIIVUE.GL.4.2</span></div>
+            <div class="flex gap-4">
+                <span>VOXEL: 1mm</span>
+                <span>SLICE: AXIAL</span>
+                <span class="text-[#00f3ff]">GPU: READY</span>
+                <button onclick="togglePanel('panel-footer')" class="hover:text-white cursor-pointer ml-2">[x]</button>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- NIIVUE SCRIPT -->
+    <script type="module" async>
+        import { Niivue } from "https://unpkg.com/@niivue/niivue@0.57.0/dist/index.js"
+
+        // Setup Niivue
+        var volumeList = [
+            { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" }
+        ];
+
+        var nv = new Niivue({ 
+            // Important: Allow Niivue to fill the canvas which fills the screen
+            isResizeCanvas: false, 
+            // Transparent background to show the CSS Blueprint Grid
+            backColor: [0, 0, 0, 0],
+            // Crosshair enabled
+            show3Dcrosshair: true,
+            loadingText: "LOADING FORENSIC DATA...",
+            dragAndDropEnabled: true
+        });
+
+        await nv.attachTo("gl");
+        await nv.loadVolumes(volumeList);
+        
+        // Settings for Forensic Look
+        nv.setSliceType(nv.sliceTypeMultiplanar); // 2D planes + 3D
+        nv.opts.isColorbar = false; // Minimalist
+        await nv.updateGLVolume();
+        
+        // Global toggle function
+        window.togglePanel = function(id) {
+            const el = document.getElementById(id);
+            if (el.classList.contains('opacity-0')) {
+                el.classList.remove('opacity-0', 'pointer-events-none');
+            } else {
+                el.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+    </script>
+</body>
+</html>
