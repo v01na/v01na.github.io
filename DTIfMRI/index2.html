@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ДТ - МРТ Анализ (Интерактивный)</title>
+    
+    <!-- Tailwind CSS v4 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-neon-cyan: #00f3ff;
+            --color-neon-purple: #bc13fe;
+            --color-neon-orange: #ff9100;
+            --color-alert-red: #ff2a2a;
+            --bg-glass: rgba(11, 15, 25, 0.75);
+            --border-glass: rgba(0, 243, 255, 0.2);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #05070a;
+            color: #e0f2fe;
+            font-family: 'Orbitron', sans-serif;
+            /* Курсор-перекрестие глобально */
+            cursor: crosshair; 
+        }
+
+        .font-mono { font-family: 'Share Tech Mono', monospace; }
+
+        /* FORENSIC BLUEPRINT GRID BACKGROUND */
+        .blueprint-grid {
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            background-color: #020408;
+            background-image: 
+                /* Major Grid lines */
+                linear-gradient(rgba(0, 243, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.1) 1px, transparent 1px),
+                /* Minor Grid lines */
+                linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+            background-size: 100px 100px, 20px 20px;
+            /* Vignette for depth */
+            mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+            -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 40%, rgba(0,0,0,0.3) 100%);
+        }
+
+        /* GLASSMORPHISM PANELS */
+        .glass-panel {
+            position: absolute; /* Changed to Absolute for Dragging */
+            background: var(--bg-glass);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--border-glass);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            z-index: 100; /* UI on top */
+        }
+
+        /* Drag Handle Cursor */
+        .drag-handle {
+            cursor: move;
+            user-select: none;
+        }
+
+        /* Canvas Setup */
+        canvas#gl {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 0;
+            outline: none;
+            /* Ensure canvas itself doesn't block clicks to background if empty */
+            pointer-events: auto; 
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- LAYER 0: Blueprint Background -->
+    <div class="blueprint-grid"></div>
+
+    <!-- LAYER 1: Niivue Fullscreen Canvas -->
+    <canvas id="gl"></canvas>
+
+    <!-- LAYER 2: Draggable UI Panels -->
+    <!-- Note: Initial positions set via inline styles or Tailwind classes -->
+    
+    <!-- HEADER PANEL -->
+    <div id="panel_header" class="glass-panel rounded-lg w-[600px] h-20 left-[50%] ml-[-300px] top-4 flex flex-col justify-center px-6">
+        <!-- Drag Area -->
+        <div id="panel_header_drag" class="drag-handle w-full h-full absolute inset-0 z-0"></div>
+        
+        <!-- Content -->
+        <div class="relative z-10 flex items-center justify-between pointer-events-none">
+            <div class="flex items-center gap-4">
+                <div class="w-8 h-8 border border-[#00f3ff] flex items-center justify-center bg-cyan-900/30">
+                    <div class="w-3 h-3 bg-[#00f3ff]"></div>
+                </div>
+                <div class="flex flex-col">
+                    <h1 class="text-xl font-bold text-white tracking-widest uppercase leading-none">
+                        ДТ - <span class="text-[#00f3ff]">МРТ</span>
+                    </h1>
+                    <span class="text-[9px] text-gray-400 uppercase tracking-wider font-mono mt-1">
+                        Диффузионно-тензорная Магнитно-Резонансная Томография
+                    </span>
+                </div>
+            </div>
+
+            <!-- View Controls (Clickable) -->
+            <div class="flex gap-2 text-[10px] font-mono pointer-events-auto">
+                <button onclick="togglePanel('panel_left')" class="px-2 py-1 border border-white/20 hover:bg-white/10 hover:text-[#00f3ff] transition cursor-pointer">L.PANEL</button>
+                <button onclick="togglePanel('panel_right')" class="px-2 py-1 border border-white/20 hover:bg-white/10 hover:text-[#00f3ff] transition cursor-pointer">R.PANEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEFT PANEL -->
+    <div id="panel_left" class="glass-panel rounded-lg w-[300px] top-28 left-6 p-0">
+        <!-- Drag Header -->
+        <div id="panel_left_drag" class="drag-handle h-8 border-b border-white/10 bg-white/5 flex items-center justify-between px-3 rounded-t-lg">
+            <span class="text-[#00f3ff] text-[10px] font-bold uppercase tracking-widest">Источник сигнала</span>
+            <button onclick="togglePanel('panel_left')" class="text-gray-500 hover:text-white cursor-pointer">[x]</button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-4 flex flex-col gap-4">
+            <!-- Static Visualizer -->
+            <div class="h-32 bg-black/60 border border-white/10 relative p-2 flex items-end justify-between">
+                 <div class="w-1 bg-[#bc13fe] h-[30%]"></div>
+                 <div class="w-1 bg-[#bc13fe] h-[50%]"></div>
+                 <div class="w-1 bg-[#bc13fe] h-[20%]"></div>
+                 <div class="w-1 bg-[#00f3ff] h-[60%]"></div>
+                 <div class="w-1 bg-[#00f3ff] h-[80%]"></div>
+                 <div class="w-1 bg-[#ff9100] h-[95%] shadow-[0_0_5px_#ff9100]"></div>
+                 <div class="w-1 bg-[#00f3ff] h-[70%]"></div>
+                 <div class="w-1 bg-[#bc13fe] h-[40%]"></div>
+                 <div class="w-1 bg-[#bc13fe] h-[25%]"></div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 font-mono text-[10px]">
+                <div class="p-2 bg-white/5 border border-white/10">
+                    <div class="text-gray-400">СМЕЩЕНИЕ</div>
+                    <div class="text-[#00f3ff]">-0.02ms</div>
+                </div>
+                <div class="p-2 bg-white/5 border border-white/10">
+                    <div class="text-gray-400">ВЕРОЯТНОСТЬ</div>
+                    <div class="text-[#ff9100]">99.8%</div>
+                </div>
+            </div>
+
+            <div class="pt-2 border-t border-white/10">
+                <div class="space-y-3 font-mono text-[10px]">
+                    <div class="flex items-center justify-between">
+                        <span>ПОРОГ FA</span>
+                        <span class="text-[#00f3ff]">0.2</span>
+                    </div>
+                    <div class="h-1 w-full bg-gray-700 relative">
+                        <div class="absolute left-0 top-0 h-full w-[40%] bg-[#00f3ff]"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div id="panel_right" class="glass-panel rounded-lg w-[300px] top-28 right-6 p-0">
+        <!-- Drag Header -->
+        <div id="panel_right_drag" class="drag-handle h-8 border-b border-white/10 bg-white/5 flex items-center justify-between px-3 rounded-t-lg">
+            <span class="text-[#00f3ff] text-[10px] font-bold uppercase tracking-widest">Патология</span>
+            <button onclick="togglePanel('panel_right')" class="text-gray-500 hover:text-white cursor-pointer">[x]</button>
+        </div>
+
+        <div class="p-4 flex flex-col gap-4">
+             <div class="flex items-center gap-4 bg-white/5 p-3 border-l-2 border-[#ff2a2a]">
+                <div class="text-[#ff2a2a] font-bold text-2xl">HI</div>
+                <div class="text-[10px] font-mono">
+                    <div class="text-white font-bold">МОЗОЛИСТОЕ ТЕЛО</div>
+                    <div class="text-gray-400">НЕКИНЕТИЧЕСКАЯ ТРАВМА</div>
+                </div>
+            </div>
+
+            <div class="h-40 border border-white/10 bg-black/40 p-2 relative">
+                <div class="text-[9px] text-gray-500 absolute top-1 left-1">FA ГИСТОГРАММА</div>
+                <div class="flex items-end h-full gap-1 pt-4">
+                    <div class="flex-1 bg-cyan-900 h-[20%]"></div>
+                    <div class="flex-1 bg-cyan-800 h-[40%]"></div>
+                    <div class="flex-1 bg-cyan-700 h-[60%]"></div>
+                    <div class="flex-1 bg-[#ff2a2a] h-[30%] opacity-80 border-t border-[#ff2a2a]"></div>
+                    <div class="flex-1 bg-cyan-600 h-[50%]"></div>
+                    <div class="flex-1 bg-cyan-900 h-[10%]"></div>
+                </div>
+            </div>
+
+            <button class="w-full py-2 bg-[#00f3ff]/10 border border-[#00f3ff] text-[#00f3ff] text-xs font-bold hover:bg-[#00f3ff]/20 transition cursor-pointer uppercase">
+                Экспорт Экспертизы
+            </button>
+        </div>
+    </div>
+
+    <!-- SCRIPT FOR DRAGGING -->
+    <script>
+        // Generic Drag Function
+        function makeDraggable(elementId, handleId) {
+            const elmnt = document.getElementById(elementId);
+            const handle = document.getElementById(handleId);
+            
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+
+            handle.onmousedown = dragMouseDown;
+
+            function dragMouseDown(e) {
+                e = e || window.event;
+                e.preventDefault();
+                // Get the mouse cursor position at startup:
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                // Call a function whenever the cursor moves:
+                document.onmousemove = elementDrag;
+            }
+
+            function elementDrag(e) {
+                e = e || window.event;
+                e.preventDefault();
+                // Calculate the new cursor position:
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                // Set the element's new position:
+                elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+                elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+                
+                // Remove margin if it was centered initially to avoid jump
+                elmnt.style.marginLeft = "0";
+            }
+
+            function closeDragElement() {
+                // Stop moving when mouse button is released:
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+
+        // Initialize Drag for Panels
+        makeDraggable("panel_header", "panel_header_drag");
+        makeDraggable("panel_left", "panel_left_drag");
+        makeDraggable("panel_right", "panel_right_drag");
+
+        // Toggle Visibility Function
+        window.togglePanel = function(id) {
+            const el = document.getElementById(id);
+            if (el.style.display === "none") {
+                el.style.display = "flex"; // Restore as flex container
+            } else {
+                el.style.display = "none";
+            }
+        }
+    </script>
+
+    <!-- NIIVUE SCRIPT -->
+    <script type="module" async>
+        import { Niivue } from "https://unpkg.com/@niivue/niivue@0.57.0/dist/index.js"
+
+        var volumeList = [
+            { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" }
+        ];
+
+        var nv = new Niivue({ 
+            isResizeCanvas: false, 
+            // IMPORTANT: [0,0,0,0] is Transparent Black. 
+            // This ensures the CSS grid shows through the canvas.
+            backColor: [0, 0, 0, 0], 
+            show3Dcrosshair: true,
+            loadingText: "ЗАГРУЗКА ДАННЫХ...",
+            dragAndDropEnabled: true
+        });
+
+        await nv.attachTo("gl");
+        await nv.loadVolumes(volumeList);
+        
+        nv.setSliceType(nv.sliceTypeMultiplanar);
+        nv.opts.isColorbar = false; 
+        await nv.updateGLVolume();
+    </script>
+</body>
+</html>
