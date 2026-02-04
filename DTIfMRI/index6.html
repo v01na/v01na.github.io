@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Судебная ДТ-МРТ: Фиксация DEW (Quad-View)</title>
+    
+    <!-- Tailwind CSS v4 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-neon-cyan: #00f3ff;
+            --color-alert-red: #ff2a2a;
+            --bg-glass: rgba(12, 12, 12, 0.85);
+            --border-glass: rgba(255, 255, 255, 0.15);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrollbars */
+            background-color: #000000;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            /* Default cursor */
+            cursor: default; 
+        }
+
+        .font-mono { font-family: 'Share Tech Mono', monospace; }
+
+        /* --- UI PANELS --- */
+        .glass-panel {
+            position: absolute;
+            background: var(--bg-glass);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--border-glass);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            /* Important: Panel z-index > Canvas z-index */
+            z-index: 50; 
+            display: flex;
+            flex-direction: column;
+            /* Allow panel interaction, but don't block canvas underneath via transparent areas? 
+               Actually we want panels to block canvas events so you don't rotate brain while clicking UI */
+            pointer-events: auto; 
+            border-radius: 8px;
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(0, 243, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
+        }
+
+        /* --- DRAG HANDLES --- */
+        .drag-handle {
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        /* --- CANVAS --- */
+        /* Canvas must be clickable */
+        canvas#gl {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 0; /* Background layer */
+            outline: none;
+            display: block;
+        }
+
+        /* --- UTILS --- */
+        button { user-select: none; }
+        button:active { transform: translateY(1px); }
+        
+        /* Custom scrollbar for panels */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00f3ff; }
+
+    </style>
+</head>
+<body>
+
+    <!-- NIIVUE CANVAS -->
+    <canvas id="gl"></canvas>
+
+    <!-- === UI PANELS === -->
+
+    <!-- 1. HEADER (Floating Top) -->
+    <!-- Centered via CSS transform initially. JS will remove transform on drag. -->
+    <div id="panel_header" class="glass-panel w-[500px] top-4 left-1/2 -translate-x-1/2 border-t-2 border-t-[#00f3ff] rounded-b-lg rounded-t-lg">
+        
+        <!-- Drag Zone -->
+        <div id="drag_header" class="drag-handle w-full py-3 flex flex-col items-center justify-center bg-white/5 border-b border-white/10 rounded-t-lg group">
+            <h1 class="text-xl font-bold tracking-[0.2em] text-white uppercase group-hover:text-[#00f3ff] transition pointer-events-none">
+                ДТ - <span class="text-[#00f3ff]">МРТ</span>
+            </h1>
+            <p class="text-[9px] text-gray-400 uppercase tracking-widest font-mono mt-1 pointer-events-none">
+                Forensic DTI Analysis Unit
+            </p>
+        </div>
+
+        <!-- Menu -->
+        <div class="flex justify-center gap-4 py-2 bg-black/40 rounded-b-lg">
+            <button onclick="togglePanel('panel_left')" class="text-[10px] font-mono text-gray-400 hover:text-white border-b border-transparent hover:border-[#00f3ff] transition uppercase cursor-pointer">
+                Источники
+            </button>
+            <button onclick="togglePanel('panel_right')" class="text-[10px] font-mono text-gray-400 hover:text-white border-b border-transparent hover:border-[#ff2a2a] transition uppercase cursor-pointer">
+                Диагностика
+            </button>
+            <button onclick="resetView()" class="text-[10px] font-mono text-gray-400 hover:text-white border-b border-transparent hover:border-white transition uppercase cursor-pointer">
+                Сброс Вида
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. LEFT PANEL -->
+    <div id="panel_left" class="glass-panel w-[260px] top-28 left-6">
+        <div id="drag_left" class="drag-handle h-8 bg-white/5 border-b border-white/10 flex items-center justify-between px-3 rounded-t-lg">
+            <span class="text-[#00f3ff] text-[10px] font-bold uppercase tracking-widest pointer-events-none">Сигнал</span>
+            <button onclick="togglePanel('panel_left')" class="text-gray-500 hover:text-white cursor-pointer px-2">✕</button>
+        </div>
+
+        <div class="p-3 space-y-3">
+            <!-- Spectrum -->
+            <div class="relative h-20 bg-black/60 border border-white/10 rounded overflow-hidden">
+                <div class="absolute inset-0 flex items-end justify-between px-2 pb-0">
+                     <div class="w-1.5 bg-cyan-900 h-[30%]"></div>
+                     <div class="w-1.5 bg-cyan-800 h-[50%]"></div>
+                     <div class="w-1.5 bg-cyan-600 h-[20%]"></div>
+                     <div class="w-1.5 bg-[#ff9100] h-[90%] shadow-[0_0_8px_#ff9100]"></div>
+                     <div class="w-1.5 bg-cyan-700 h-[45%]"></div>
+                     <div class="w-1.5 bg-cyan-900 h-[15%]"></div>
+                </div>
+            </div>
+
+            <div class="font-mono text-[9px] space-y-1 text-gray-300">
+                <div class="flex justify-between">
+                    <span>FREQ:</span> <span class="text-white">1.3 GHz</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>MOD:</span> <span class="text-[#00f3ff]">FREY-PULSE</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. RIGHT PANEL -->
+    <div id="panel_right" class="glass-panel w-[260px] top-28 right-6">
+        <div id="drag_right" class="drag-handle h-8 bg-white/5 border-b border-white/10 flex items-center justify-between px-3 rounded-t-lg">
+            <span class="text-[#ff2a2a] text-[10px] font-bold uppercase tracking-widest pointer-events-none">Патология</span>
+            <button onclick="togglePanel('panel_right')" class="text-gray-500 hover:text-white cursor-pointer px-2">✕</button>
+        </div>
+
+        <div class="p-3 space-y-3">
+            <!-- Layers -->
+            <div class="space-y-1">
+                <div class="flex items-center justify-between text-[10px] font-mono text-gray-300">
+                    <span>МРТ (T1/T2)</span>
+                    <input type="checkbox" checked onchange="toggleLayer(0, this.checked)" class="accent-white cursor-pointer">
+                </div>
+                <div class="flex items-center justify-between text-[10px] font-mono text-gray-300">
+                    <span class="text-[#ff2a2a]">Карта Повреждений</span>
+                    <input type="checkbox" checked onchange="toggleLayer(1, this.checked)" class="accent-[#ff2a2a] cursor-pointer">
+                </div>
+            </div>
+
+            <!-- Analysis -->
+            <div class="bg-[#ff2a2a]/10 border border-[#ff2a2a]/30 p-2 rounded">
+                <div class="text-[9px] text-[#ff2a2a] uppercase font-bold mb-1">ROI: Corpus Callosum</div>
+                <div class="flex justify-between text-[9px] font-mono">
+                    <span class="text-gray-400">FA Value:</span>
+                    <span class="text-white font-bold">0.18 (LOW)</span>
+                </div>
+            </div>
+            
+            <button class="w-full py-2 bg-[#ff2a2a]/10 hover:bg-[#ff2a2a]/20 border border-[#ff2a2a]/50 text-white text-[9px] font-bold uppercase transition cursor-pointer">
+                Добавить в Протокол
+            </button>
+        </div>
+    </div>
+
+    <!-- 4. FOOTER STATUS -->
+    <div class="fixed bottom-0 left-0 w-full h-5 bg-black border-t border-white/10 flex items-center justify-between px-4 z-40 pointer-events-none select-none">
+        <div class="flex gap-4 text-[9px] font-mono text-gray-500">
+            <span>MOD: <span class="text-white">DTI</span></span>
+            <span>VOX: <span class="text-white">1mm</span></span>
+        </div>
+        <div class="text-[9px] font-mono text-[#00f3ff]">SYSTEM ACTIVE</div>
+    </div>
+
+
+    <!-- === LOGIC === -->
+    <script>
+        // --- 1. DRAGGABLE LOGIC (FIXED) ---
+        function initDraggable(panelId, handleId) {
+            const panel = document.getElementById(panelId);
+            const handle = document.getElementById(handleId);
+            
+            let isDragging = false;
+            let startX, startY, initialLeft, initialTop;
+
+            handle.onmousedown = function(e) {
+                e.preventDefault();
+                isDragging = true;
+                
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                // Get absolute position rect
+                const rect = panel.getBoundingClientRect();
+                initialLeft = rect.left;
+                initialTop = rect.top;
+
+                // CRITICAL FIX:
+                // 1. Set explicit pixel values for top/left based on current visual position
+                panel.style.left = initialLeft + 'px';
+                panel.style.top = initialTop + 'px';
+                // 2. Remove transform centering if it exists
+                panel.style.transform = 'none';
+                // 3. Reset margins that might affect position
+                panel.style.margin = '0';
+                
+                document.body.style.cursor = 'grabbing';
+                
+                document.onmouseup = stopDrag;
+                document.onmousemove = doDrag;
+            };
+
+            function doDrag(e) {
+                if (!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                panel.style.left = (initialLeft + dx) + 'px';
+                panel.style.top = (initialTop + dy) + 'px';
+            }
+
+            function stopDrag() {
+                isDragging = false;
+                document.body.style.cursor = 'default';
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+
+        initDraggable('panel_header', 'drag_header');
+        initDraggable('panel_left', 'drag_left');
+        initDraggable('panel_right', 'drag_right');
+
+        // --- 2. TOGGLE LOGIC ---
+        window.togglePanel = function(id) {
+            const el = document.getElementById(id);
+            el.style.display = (el.style.display === 'none') ? 'flex' : 'none';
+        }
+
+    </script>
+
+    <!-- === NIIVUE (WEBGL) === -->
+    <script type="module" async>
+        import { Niivue } from "https://unpkg.com/@niivue/niivue@0.57.0/dist/index.js"
+
+        // Initialize Niivue
+        const nv = new Niivue({
+            isResizeCanvas: false, // We control canvas size via CSS (100vw/100vh)
+            backColor: [0, 0, 0, 1], // Pure black background
+            show3Dcrosshair: true, // Red crosshair
+            loadingText: "LOADING DTI DATA...",
+            dragAndDropEnabled: true
+        });
+
+        // Expose to window for UI buttons
+        window.nv = nv;
+
+        // Attach to canvas
+        await nv.attachTo("gl");
+
+        // Load Data: Base MNI + Lesion Overlay
+        await nv.loadVolumes([
+            { 
+                url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz", // Base Brain
+                opacity: 1, 
+                colormap: "gray" 
+            },
+            {
+                url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz", // Mock Lesion Overlay
+                opacity: 0.5,
+                colormap: "hot", // Red heat map
+                cal_min: 90,     // Only show bright areas
+                cal_max: 120
+            }
+        ]);
+
+        // --- QUAD VIEW CONFIGURATION ---
+        // Force Multiplanar View (Axial + Coronal + Sagittal + 3D)
+        nv.setSliceType(nv.sliceTypeMultiplanar);
+
+        // Customize Crosshair (Forensic Red)
+        nv.opts.crosshairColor = [1, 0, 0, 1];
+        nv.opts.crosshairWidth = 1.5;
+
+        // Remove Colorbar for clean UI
+        nv.opts.isColorbar = false;
+        
+        // Ensure 3D View is visible and rendered
+        nv.opts.multiplanarForceRender = true; 
+        
+        await nv.updateGLVolume();
+
+        // UI Helpers
+        window.resetView = function() {
+            nv.setSliceType(nv.sliceTypeMultiplanar);
+            nv.resetGlobal();
+        }
+
+        window.toggleLayer = function(layerIndex, isVisible) {
+            if (nv.volumes.length > layerIndex) {
+                // If checking box, set opacity to default (1 or 0.5). If unchecking, set to 0.
+                let targetOpacity = isVisible ? (layerIndex === 0 ? 1.0 : 0.5) : 0.0;
+                nv.setOpacity(layerIndex, targetOpacity);
+            }
+        }
+    </script>
+</body>
+</html>
