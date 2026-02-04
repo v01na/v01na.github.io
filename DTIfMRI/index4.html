@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ДТ - МРТ: Судебный Анализ</title>
+    
+    <!-- Tailwind CSS v4 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-neon-cyan: #00f3ff;
+            --color-alert-red: #ff2a2a;
+            --bg-glass: rgba(10, 10, 10, 0.85);
+            --border-glass: rgba(255, 255, 255, 0.2);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000000;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            cursor: crosshair;
+        }
+
+        .font-mono { font-family: 'Share Tech Mono', monospace; }
+
+        /* GLASS PANELS */
+        .glass-panel {
+            position: absolute;
+            background: var(--bg-glass);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border-glass);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.9);
+            z-index: 50;
+            /* CRITICAL: Ensure panels catch mouse events so they don't rotate the brain */
+            pointer-events: auto; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        .glass-panel:hover {
+            border-color: var(--color-neon-cyan);
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.15);
+        }
+
+        /* DRAG HANDLES */
+        .drag-handle {
+            cursor: move; /* Explicit move cursor */
+            user-select: none;
+            touch-action: none;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* CANVAS FULLSCREEN */
+        canvas#gl {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 0;
+            outline: none;
+        }
+
+        /* UTILS */
+        .neon-text { text-shadow: 0 0 5px currentColor; }
+        button:hover { filter: brightness(1.2); }
+    </style>
+</head>
+<body>
+
+    <!-- 3D VIEWER (BACKGROUND) -->
+    <canvas id="gl"></canvas>
+
+    <!-- UI LAYER -->
+    
+    <!-- 1. HEADER PANEL -->
+    <!-- Initial position centered via CSS transform/left -->
+    <div id="panel_header" class="glass-panel w-[500px] h-auto top-4 left-1/2 -translate-x-1/2 rounded-b-xl border-t-0 bg-black/90">
+        
+        <!-- Drag Handle Area -->
+        <div id="drag_header" class="drag-handle w-full py-4 flex flex-col items-center justify-center relative group">
+            <div class="absolute top-2 w-12 h-1 bg-white/20 rounded-full group-hover:bg-[#00f3ff]"></div>
+            
+            <h1 class="text-2xl font-bold tracking-[0.15em] text-white uppercase mt-2">
+                ДТ - <span class="text-[#00f3ff] neon-text">МРТ</span>
+            </h1>
+            <p class="text-[9px] text-gray-400 uppercase tracking-widest font-mono mt-1">
+                Диффузионно-тензорная Томография
+            </p>
+        </div>
+
+        <!-- Menu Bar (Non-draggable part) -->
+        <div class="flex justify-center gap-4 pb-3 pt-1 border-t border-white/10 text-[10px] font-mono">
+             <button onclick="togglePanel('panel_left')" class="px-3 py-1 bg-white/5 border border-white/10 hover:border-[#00f3ff] hover:text-[#00f3ff] transition rounded cursor-pointer">
+                ИСТОЧНИК
+             </button>
+             <button onclick="togglePanel('panel_right')" class="px-3 py-1 bg-white/5 border border-white/10 hover:border-[#00f3ff] hover:text-[#00f3ff] transition rounded cursor-pointer">
+                АНАЛИЗ ПАТОЛОГИЙ
+             </button>
+        </div>
+    </div>
+
+    <!-- 2. LEFT PANEL (SIGNAL) -->
+    <div id="panel_left" class="glass-panel w-[280px] top-40 left-8 rounded-lg overflow-hidden">
+        <!-- Drag Header -->
+        <div id="drag_left" class="drag-handle h-9 bg-white/5 border-b border-white/10 flex items-center justify-between px-3">
+            <span class="text-[#00f3ff] text-[10px] font-bold uppercase tracking-widest">Сигнал</span>
+            <button onclick="togglePanel('panel_left')" class="text-gray-500 hover:text-white cursor-pointer px-2">✕</button>
+        </div>
+
+        <div class="p-4 space-y-4">
+            <!-- Spectrum Visualizer -->
+            <div class="h-24 bg-black/50 border border-white/10 relative flex items-end justify-between px-2 pb-1 overflow-hidden">
+                <!-- Grid Overlay -->
+                <div class="absolute inset-0 bg-[linear-gradient(rgba(0,243,255,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,243,255,0.1)_1px,transparent_1px)] bg-[length:10px_10px] opacity-20 pointer-events-none"></div>
+                
+                <div class="w-1 bg-cyan-900 h-[30%]"></div>
+                <div class="w-1 bg-cyan-700 h-[50%]"></div>
+                <div class="w-1 bg-[#00f3ff] h-[20%]"></div>
+                <div class="w-1 bg-[#ff9100] h-[95%] shadow-[0_0_8px_#ff9100]"></div> <!-- Spike -->
+                <div class="w-1 bg-cyan-600 h-[40%]"></div>
+                <div class="w-1 bg-cyan-800 h-[25%]"></div>
+                <div class="w-1 bg-cyan-900 h-[10%]"></div>
+            </div>
+
+            <div class="space-y-2 font-mono text-[10px]">
+                <div class="flex justify-between">
+                    <span class="text-gray-400">OFFSET:</span>
+                    <span class="text-[#00f3ff]">-0.02ms</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-400">FREQ:</span>
+                    <span class="text-white">1.2 GHz</span>
+                </div>
+            </div>
+
+            <div class="pt-2 border-t border-white/10">
+                <div class="text-[10px] text-gray-400 mb-1">СИНХРОНИЗАЦИЯ</div>
+                <div class="w-full h-1 bg-gray-800 rounded overflow-hidden">
+                    <div class="h-full bg-[#00f3ff] w-[98%] shadow-[0_0_5px_#00f3ff]"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. RIGHT PANEL (ANALYSIS) -->
+    <div id="panel_right" class="glass-panel w-[280px] top-40 right-8 rounded-lg overflow-hidden">
+        <!-- Drag Header -->
+        <div id="drag_right" class="drag-handle h-9 bg-white/5 border-b border-white/10 flex items-center justify-between px-3">
+            <span class="text-[#00f3ff] text-[10px] font-bold uppercase tracking-widest">Диагностика</span>
+            <button onclick="togglePanel('panel_right')" class="text-gray-500 hover:text-white cursor-pointer px-2">✕</button>
+        </div>
+
+        <div class="p-4 space-y-4">
+            <!-- Alert Box -->
+            <div class="border border-[#ff2a2a]/30 bg-[#ff2a2a]/10 p-3 rounded">
+                <div class="flex items-center gap-2 mb-1">
+                    <div class="w-2 h-2 bg-[#ff2a2a] rounded-full animate-pulse"></div>
+                    <span class="text-[#ff2a2a] text-[10px] font-bold uppercase">Обнаружена Аномалия</span>
+                </div>
+                <p class="text-[11px] leading-tight text-gray-300">
+                    Микроструктурное повреждение белого вещества.
+                </p>
+                <p class="text-[10px] text-gray-500 mt-1 font-mono">ROI: Corpus Callosum</p>
+            </div>
+
+            <!-- Metrics -->
+            <div class="bg-black/40 border border-white/5 p-2 rounded">
+                <div class="flex justify-between items-center text-[10px] font-mono mb-1">
+                    <span class="text-gray-400">FA (Anisotropy)</span>
+                    <span class="text-[#ff2a2a] font-bold">0.18</span>
+                </div>
+                <div class="w-full h-1 bg-gray-800 rounded mb-2">
+                    <div class="h-full bg-[#ff2a2a] w-[30%]"></div>
+                </div>
+                
+                <div class="flex justify-between items-center text-[10px] font-mono mb-1">
+                    <span class="text-gray-400">MD (Diffusivity)</span>
+                    <span class="text-[#00f3ff]">0.82</span>
+                </div>
+                <div class="w-full h-1 bg-gray-800 rounded">
+                    <div class="h-full bg-[#00f3ff] w-[70%]"></div>
+                </div>
+            </div>
+
+            <button class="w-full py-2 bg-[#00f3ff]/10 hover:bg-[#00f3ff]/20 border border-[#00f3ff]/50 text-[#00f3ff] text-[10px] font-bold uppercase tracking-widest transition cursor-pointer">
+                Экспорт Отчета
+            </button>
+        </div>
+    </div>
+
+    <!-- 4. FOOTER -->
+    <div class="fixed bottom-0 left-0 w-full h-6 bg-black/80 border-t border-white/10 flex items-center justify-between px-4 z-40 pointer-events-none">
+        <div class="flex gap-4 text-[9px] font-mono text-gray-500">
+            <span>MODALITY: <span class="text-white">DTI-MRI</span></span>
+            <span>VOXEL: <span class="text-white">2mm ISOTROPIC</span></span>
+        </div>
+        <div class="text-[9px] font-mono text-[#00f3ff]">
+            SYSTEM ONLINE
+        </div>
+    </div>
+
+    <!-- INTERACTIVITY SCRIPT -->
+    <script>
+        // --- DRAGGABLE LOGIC ---
+        function makeDraggable(elId, handleId) {
+            const el = document.getElementById(elId);
+            const handle = document.getElementById(handleId);
+            
+            let isDragging = false;
+            let startX, startY, initialLeft, initialTop;
+
+            handle.onmousedown = function(e) {
+                e.preventDefault(); // Prevent text selection
+                isDragging = true;
+                
+                // Get mouse start position
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                // Get element current position
+                // We use getBoundingClientRect to get absolute screen coords
+                const rect = el.getBoundingClientRect();
+                initialLeft = rect.left;
+                initialTop = rect.top;
+
+                // CRITICAL: Remove CSS transforms (like -translate-x-1/2) 
+                // and switch to absolute pixel positioning to prevent jumping
+                el.style.transform = 'none';
+                el.style.left = initialLeft + 'px';
+                el.style.top = initialTop + 'px';
+                el.style.bottom = 'auto';
+                el.style.right = 'auto';
+
+                document.onmouseup = stopDrag;
+                document.onmousemove = doDrag;
+            };
+
+            function doDrag(e) {
+                if (!isDragging) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                el.style.left = (initialLeft + dx) + 'px';
+                el.style.top = (initialTop + dy) + 'px';
+            }
+
+            function stopDrag() {
+                isDragging = false;
+                document.onmouseup = null;
+                document.onmousemove = null;
+            }
+        }
+
+        // Initialize Draggables
+        makeDraggable('panel_header', 'drag_header');
+        makeDraggable('panel_left', 'drag_left');
+        makeDraggable('panel_right', 'drag_right');
+
+        // --- TOGGLE LOGIC ---
+        window.togglePanel = function(id) {
+            const el = document.getElementById(id);
+            if (el.style.display === 'none') {
+                el.style.display = 'flex';
+            } else {
+                el.style.display = 'none';
+            }
+        }
+    </script>
+
+    <!-- NIIVUE RENDERER -->
+    <script type="module" async>
+        import { Niivue } from "https://unpkg.com/@niivue/niivue@0.57.0/dist/index.js"
+
+        // Setup Niivue
+        var nv = new Niivue({ 
+            isResizeCanvas: false, 
+            backColor: [0, 0, 0, 1], // Pure Black
+            show3Dcrosshair: true,
+            loadingText: "ЗАГРУЗКА МРТ...",
+            dragAndDropEnabled: true // Allow dropping local files
+        });
+
+        // Attach
+        await nv.attachTo("gl");
+        
+        // Load Data (MNI152 Standard)
+        await nv.loadVolumes([
+            { url: "https://niivue.github.io/niivue-demo-images/mni152.nii.gz" }
+        ]);
+        
+        // Configure View: Multiplanar (4 views)
+        nv.setSliceType(nv.sliceTypeMultiplanar);
+        
+        // Red Crosshair
+        nv.opts.crosshairColor = [1, 0, 0, 1];
+        nv.opts.crosshairWidth = 1;
+        
+        // Clean UI
+        nv.opts.isColorbar = false;
+        nv.opts.textHeight = 0.02; // Smaller text labels
+
+        await nv.updateGLVolume();
+    </script>
+</body>
+</html>
